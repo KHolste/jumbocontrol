@@ -100,7 +100,11 @@ class TemperaturMessung:
     def __init__(self):
         self._task = None
         self._reserviere()
-        self._task_starten()
+        try:
+            self._task_starten()
+        except Exception:
+            self.beenden()
+            raise
 
     def _reserviere(self):
         system = System.local()

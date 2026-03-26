@@ -1,2 +1,6 @@
-from .temperatur import TemperaturMessung
-from .druck      import DruckMessung
+try:
+    from .temperatur import TemperaturMessung
+except ImportError:
+    pass  # nidaqmx nicht installiert – TemperaturMessung nicht verfügbar
+
+from .druck import DruckMessung
