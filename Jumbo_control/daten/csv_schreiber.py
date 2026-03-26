@@ -129,9 +129,10 @@ class CsvSchreiber:
 
         zeile = [iso_lok, f"{mjd:.6f}", iso_utc]
         for name in DRUCK_SPALTEN:
-            d = werte.get(name)
-            # Sensorname für Kalibrierung (CENT → CENTER)
-            kal_name = "CENTER" if name == "CENT" else name
+            # CSV-Spalte heißt "CENT", hardware/druck.py liefert aber "CENTER"
+            hw_name = "CENTER" if name == "CENT" else name
+            d = werte.get(hw_name)
+            kal_name = hw_name
             if d and d["gueltig"] and d["mbar"] is not None:
                 roh = d["mbar"]
                 if _km.hat_kalibrierung(kal_name):
