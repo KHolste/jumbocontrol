@@ -31,6 +31,8 @@ class SignalBridge(QObject):
     neue_druecke      = pyqtSignal(dict)
     alarm             = pyqtSignal(str, float)
     hw_status         = pyqtSignal(dict)
+    log_msg           = pyqtSignal(str, str)               # (text, farbe)
+    sprung_alarm      = pyqtSignal(str, str, float, float) # (typ, name, wert, sprung)
 
 
 def _giessen_tz() -> timezone:
@@ -498,6 +500,8 @@ class Hauptfenster(QMainWindow):
         self._bridge.neue_druecke.connect(self.steckdosen_panel.update_druck)
         self._bridge.alarm.connect(self._zeige_alarm)
         self._bridge.hw_status.connect(self._update_hw_status)
+        self._bridge.log_msg.connect(self.log)
+        self._bridge.sprung_alarm.connect(self._zeige_sprung_alarm)
         self.druck_panel.kalib_geoeffnet.connect(self._kalib_fenster_oeffnen)
 
         # ── Sicherheitsverriegelung Heater ↔ Kryos ──────────
@@ -523,7 +527,7 @@ class Hauptfenster(QMainWindow):
         self._zyklus.bei_messung_druck = self._bridge.neue_druecke.emit
         self._zyklus.bei_alarm         = self._bridge.alarm.emit
         self._zyklus.bei_hw_status     = self._bridge.hw_status.emit
-        self._zyklus.bei_sprung_alarm  = self._zeige_sprung_alarm
+        self._zyklus.bei_sprung_alarm  = self._bridge.sprung_alarm.emit
         self._zyklus._alarm_einst      = self._alarm_einst
         self._zyklus.starten()
         self.log("System gestartet")
@@ -575,20 +579,19 @@ class Hauptfenster(QMainWindow):
                 namen   = [d.name for d in geraete]
                 from config import CDAQ_GERAET
                 if any(CDAQ_GERAET in n for n in namen):
-                    self.log(f"✓ cDAQ erreichbar ({CDAQ_GERAET})", farbe=self._theme["log_ok"])
+                    self._bridge.log_msg.emit(f"✓ cDAQ erreichbar ({CDAQ_GERAET})", self._theme["log_ok"])
                 else:
-                    self.log(f"⚠ cDAQ nicht gefunden (erwartet: {CDAQ_GERAET})", farbe=self._theme["log_warn"])
+                    self._bridge.log_msg.emit(f"⚠ cDAQ nicht gefunden (erwartet: {CDAQ_GERAET})", self._theme["log_warn"])
             except Exception as e:
-                self.log(f"⚠ cDAQ nicht erreichbar: {e}", farbe=self._theme["log_warn"])
+                self._bridge.log_msg.emit(f"⚠ cDAQ nicht erreichbar: {e}", self._theme["log_warn"])
 
             # ── TPG 366 – Status aus Messzyklus lesen ─────────
             if self._zyklus._hw_status.druck:
-                self.log("✓ TPG 366 (Druck) erreichbar", farbe=self._theme["log_ok"])
+                self._bridge.log_msg.emit("✓ TPG 366 (Druck) erreichbar", self._theme["log_ok"])
             else:
-                self.log("⚠ TPG 366 nicht erreichbar – Reconnect läuft automatisch",
-                         farbe=self._theme["log_warn"])
+                self._bridge.log_msg.emit("⚠ TPG 366 nicht erreichbar – Reconnect läuft automatisch",
+                                          self._theme["log_warn"])
 
-            # ── Steckdose ─────────────────────────────────────
             # ── Steckdose (mit 3 Versuchen – Netzwerk kann kurz zögern) ─
             _steckdose_status = None
             for _versuch in range(3):
@@ -596,15 +599,15 @@ class Hauptfenster(QMainWindow):
                     from hardware.steckdose import Steckdose
                     _s = Steckdose()
                     _steckdose_status = _s.status_alle()
-                    self.log("✓ Steckdose (ALL4076) erreichbar", farbe=self._theme["log_ok"])
+                    self._bridge.log_msg.emit("✓ Steckdose (ALL4076) erreichbar", self._theme["log_ok"])
                     self._bridge.hw_status.emit({"Steckdose": True})
                     break
                 except Exception as _e:
                     if _versuch < 2:
                         time.sleep(2.0)
                     else:
-                        self.log(f"⚠ Steckdose nicht erreichbar: {_e}",
-                                 farbe=self._theme["log_warn"])
+                        self._bridge.log_msg.emit(f"⚠ Steckdose nicht erreichbar: {_e}",
+                                                  self._theme["log_warn"])
                         self._bridge.hw_status.emit({"Steckdose": False})
 
             if _steckdose_status is not None:
@@ -618,21 +621,22 @@ class Hauptfenster(QMainWindow):
                     unter   = {n: d for n, d in gueltig.items()
                                if d["mbar"] < 1.0}
                     if not druecke:
-                        self.log("⚠ V1 ist EIN – Druckstatus noch nicht verfügbar",
-                                 farbe=self._theme["log_warn"])
+                        self._bridge.log_msg.emit("⚠ V1 ist EIN – Druckstatus noch nicht verfügbar",
+                                                  self._theme["log_warn"])
                     elif unter:
                         details = ", ".join(
                             f"{n}: {d['mbar']:.2E} mbar" for n, d in unter.items())
-                        self.log(
+                        self._bridge.log_msg.emit(
                             f"⛔ INKONSISTENZ: V1 ist EIN aber Druck < 1 mbar "
-                            f"({details}) – bitte prüfen!", farbe=self._theme["danger"])
+                            f"({details}) – bitte prüfen!", self._theme["danger"])
                     elif not gueltig:
-                        self.log("⛔ INKONSISTENZ: V1 ist EIN aber alle Drucksensoren ausgefallen!",
-                                 farbe=self._theme["danger"])
+                        self._bridge.log_msg.emit(
+                            "⛔ INKONSISTENZ: V1 ist EIN aber alle Drucksensoren ausgefallen!",
+                            self._theme["danger"])
                     else:
-                        self.log("✓ V1 EIN – Druck OK (≥ 1 mbar)", farbe=self._theme["log_ok"])
+                        self._bridge.log_msg.emit("✓ V1 EIN – Druck OK (≥ 1 mbar)", self._theme["log_ok"])
                 else:
-                    self.log("✓ V1 AUS – kein Sicherheitsrisiko", farbe=self._theme["log_ok"])
+                    self._bridge.log_msg.emit("✓ V1 AUS – kein Sicherheitsrisiko", self._theme["log_ok"])
 
             # ── XSP01R ────────────────────────────────────────
             try:
@@ -641,20 +645,12 @@ class Hauptfenster(QMainWindow):
                 st = x.status()
                 k1 = "EIN" if st["kryo1_system"] else "AUS"
                 k2 = "EIN" if st["kryo2_system"] else "AUS"
-                self.log(f"✓ XSP01R erreichbar (Kryo1={k1}, Kryo2={k2})",
-                         farbe=self._theme["log_ok"])
-                if "XSP01R" in self._sb_leds:
-                    self._sb_leds["XSP01R"].setStyleSheet(
-                        "background: #16a34a; border-radius: 5px;"
-                    )
-                    self._sb_leds["XSP01R"].setToolTip("XSP01R: verbunden")
+                self._bridge.log_msg.emit(f"✓ XSP01R erreichbar (Kryo1={k1}, Kryo2={k2})",
+                                          self._theme["log_ok"])
+                self._bridge.hw_status.emit({"XSP01R": True})
             except Exception as e:
-                self.log(f"⚠ XSP01R nicht erreichbar: {e}", farbe=self._theme["log_warn"])
-                if "XSP01R" in self._sb_leds:
-                    self._sb_leds["XSP01R"].setStyleSheet(
-                        "background: #dc2626; border-radius: 5px;"
-                    )
-                    self._sb_leds["XSP01R"].setToolTip(f"XSP01R: {e}")
+                self._bridge.log_msg.emit(f"⚠ XSP01R nicht erreichbar: {e}", self._theme["log_warn"])
+                self._bridge.hw_status.emit({"XSP01R": False})
 
         threading.Thread(target=_run, daemon=True).start()
 
