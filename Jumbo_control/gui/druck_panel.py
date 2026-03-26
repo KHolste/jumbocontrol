@@ -39,7 +39,8 @@ OVERRANGE_MBAR = 1013.25
 
 
 class DruckPanel(QWidget):
-    kalib_geoeffnet = pyqtSignal()
+    kalib_geoeffnet       = pyqtSignal()
+    grossanzeige_anfordern = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -249,6 +250,20 @@ class DruckPanel(QWidget):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(4, 0, 0, 0)
         layout.setSpacing(10)
+
+        # Großanzeige-Button
+        btn_gross = QPushButton("⊞ Großanzeige")
+        btn_gross.setToolTip("Druckwerte in separatem Fenster groß darstellen")
+        btn_gross.setStyleSheet("""
+            QPushButton {
+                background: #1e2d45; border: 1.5px solid #4a5e80;
+                border-radius: 5px; color: #cbd5e1;
+                font-size: 10px; font-weight: 700; padding: 4px 8px;
+            }
+            QPushButton:hover { background: #2a3f5f; border-color: #7db2ff; color: #fff; }
+        """)
+        btn_gross.clicked.connect(self.grossanzeige_anfordern.emit)
+        layout.addWidget(btn_gross)
 
         self._anzeigen = {}
         for name, farbe in SENSOR_FARBEN.items():

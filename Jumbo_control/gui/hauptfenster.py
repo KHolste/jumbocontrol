@@ -64,7 +64,8 @@ class Hauptfenster(QMainWindow):
         self._bridge = SignalBridge()
         self._zyklus = Messzyklus(intervall=5.0)
 
-        self._kalib_fenster   = None
+        self._kalib_fenster    = None
+        self._grossanzeige     = None
         self._historien_fenster = None
         self._hw_leds = {}   # keine LEDs im Header mehr, nur Statusleiste
         self._alarm_einst    = AlarmEinstellungen()
@@ -503,6 +504,7 @@ class Hauptfenster(QMainWindow):
         self._bridge.log_msg.connect(self.log)
         self._bridge.sprung_alarm.connect(self._zeige_sprung_alarm)
         self.druck_panel.kalib_geoeffnet.connect(self._kalib_fenster_oeffnen)
+        self.druck_panel.grossanzeige_anfordern.connect(self._grossanzeige_oeffnen)
 
         # ── Sicherheitsverriegelung Heater ↔ Kryos ──────────
         # SteckdosenPanel: Heater-Button prüft ob Kryos an sind
@@ -786,6 +788,15 @@ class Hauptfenster(QMainWindow):
         dlg.resize(w, h)
         layout.addWidget(scroll)
         dlg.exec()
+
+    def _grossanzeige_oeffnen(self):
+        from gui.druck_grossanzeige import DruckGrossanzeige
+        if self._grossanzeige is None:
+            self._grossanzeige = DruckGrossanzeige()
+            self._bridge.neue_druecke.connect(self._grossanzeige.aktualisieren)
+        self._grossanzeige.show()
+        self._grossanzeige.raise_()
+        self.log("Druck-Großanzeige geöffnet")
 
     def _kalib_fenster_oeffnen(self):
         if self._kalib_fenster is None:
@@ -1201,6 +1212,8 @@ class Hauptfenster(QMainWindow):
 
     def closeEvent(self, event):
         self._zyklus.stoppen()
+        if self._grossanzeige is not None:
+            self._grossanzeige.close()
         if self._kalib_fenster is not None:
             self._kalib_fenster.close()
         if self._historien_fenster is not None:
