@@ -83,6 +83,11 @@ class Messzyklus:
                 self._temperatur.beenden()
             except Exception:
                 pass
+        if self._druck:
+            try:
+                self._druck.beenden()
+            except Exception:
+                pass
         print("[Messzyklus] Gestoppt.")
 
     # ── Verbindungsaufbau ─────────────────────────────────────
@@ -172,6 +177,10 @@ class Messzyklus:
                             self.bei_messung_druck(d_werte)
                     except Exception as e:
                         print(f"[Messzyklus] Druckfehler: {e}")
+                        try:
+                            self._druck.beenden()
+                        except Exception:
+                            pass
                         self._druck = None
                         self._hw_status.druck = False
                         self._melde_hw_status()
