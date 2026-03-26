@@ -613,7 +613,7 @@ class Hauptfenster(QMainWindow):
             if _steckdose_status is not None:
                 # V1 Inkonsistenz-Check
                 v1_an   = _steckdose_status.get("V1", {}).get("an", False)
-                druecke = self.steckdosen_panel._druck_werte
+                druecke = self.steckdosen_panel.get_druck_werte()
 
                 if v1_an:
                     gueltig = {n: d for n, d in druecke.items()

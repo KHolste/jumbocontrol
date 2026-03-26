@@ -427,6 +427,10 @@ class SteckdosenPanel(QWidget):
         if self.bei_aktion:
             self.bei_aktion("Heater freigegeben – alle Kryos AUS")
 
+    def get_druck_werte(self) -> dict:
+        """Gibt die zuletzt empfangenen Druckwerte zurück (thread-safe lesbar)."""
+        return self._druck_werte
+
     def ist_heater_an(self) -> bool:
         btn = self._buttons.get("Heater")
         return bool(btn and btn.isChecked())

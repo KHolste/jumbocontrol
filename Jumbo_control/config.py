@@ -28,6 +28,11 @@ KRYO_PORTS = ["COM10", "COM11", "COM12", "COM15",
 # ── Datenspeicherung ───────────────────────────────────────────
 LOG_PFAD        = "daten/logs/"
 
+# ── Automatischer PDF-Druck ────────────────────────────────────
+# Druckername für den automatischen Tagesbericht (Extras-Menü).
+# None → Windows-Standarddrucker. Beispiel: "HP LaserJet M404"
+DRUCKER_NAME    = None
+
 # ── Grenzwerte (Alarme) ────────────────────────────────────────
 TEMP_ALARM_MAX  =  50.0   # °C – Überhitzung
 TEMP_ALARM_MIN  = -270.0  # °C – Unterkühlung
