@@ -154,8 +154,9 @@ class KryoZeile(QWidget):
 
 
 class KryoStatusPanel(QWidget):
-    # Thread-sicheres Signal zum Setzen eines Buttons
+    # Thread-sichere Signale zum Setzen der Buttons
     kryo_ein_signal = pyqtSignal(str)   # name des Kryos
+    kryo_aus_signal = pyqtSignal(str)   # name des Kryos
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -164,9 +165,11 @@ class KryoStatusPanel(QWidget):
         self.bei_aktion      = None
         self._heater_an_check = None  # Callback: True wenn Heater an
         self._kryos_gesperrt  = False
+        self._schalt_lock     = threading.Lock()
         self._build_ui()
         self._laden()
         self.kryo_ein_signal.connect(self._set_kryo_ein)
+        self.kryo_aus_signal.connect(self._set_kryo_aus)
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._aktualisieren)
@@ -387,6 +390,17 @@ class KryoStatusPanel(QWidget):
             zeile._btn.setChecked(True)
             zeile._btn.setText("EIN")
             zeile._btn.setStyleSheet(zeile._btn_style(True))
+            zeile._btn.blockSignals(False)
+        self._update_alle_ein_button()
+
+    def _set_kryo_aus(self, name: str):
+        """Setzt einen Kryo-Button auf AUS – thread-sicher via Signal."""
+        if name in self._zeilen:
+            zeile = self._zeilen[name]
+            zeile._btn.blockSignals(True)
+            zeile._btn.setChecked(False)
+            zeile._btn.setText("AUS")
+            zeile._btn.setStyleSheet(zeile._btn_style(False))
             zeile._btn.blockSignals(False)
         self._update_alle_ein_button()
 

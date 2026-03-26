@@ -984,32 +984,7 @@ class Hauptfenster(QMainWindow):
             ausgewaehlte = [n for n, cb in self._kryo_timer_checks.items() if cb.isChecked()]
             self.log(f"⏰ Kryo Timer ausgelöst: schalte {', '.join(ausgewaehlte)} EIN",
                      farbe=self._theme["log_ok"])
-
-            import threading
-            def _einschalten():
-                import time as _time
-                from hardware.geraete import get_xsp01r
-                x = get_xsp01r()
-                for name in ausgewaehlte:
-                    try:
-                        if name == "Kryo 1":
-                            x.kryo1_einschalten()
-                        elif name == "Kryo 2":
-                            x.kryo2_einschalten()
-                        else:
-                            from config import COOLPACK_PORTS
-                            from hardware.coolpack import Coolpack
-                            port = COOLPACK_PORTS.get(name)
-                            if port:
-                                c = Coolpack(port, name=name)
-                                c.einschalten()
-                                c.beenden()
-                        self._kryo_panel.kryo_ein_signal.emit(name)
-                        _time.sleep(2.0)   # Zeitversatz wie bei "Alle EIN"
-                    except Exception as e:
-                        self.log(f"Kryo Timer Fehler {name}: {e}", farbe=self._theme["log_err"])
-
-            threading.Thread(target=_einschalten, daemon=True).start()
+            self._kryo_alle_schalten(ausgewaehlte, an=True)
         else:
             # Countdown anzeigen
             h = int(verbleibend // 3600)
