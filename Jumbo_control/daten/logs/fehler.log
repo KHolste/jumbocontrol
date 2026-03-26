@@ -1,0 +1,375 @@
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T11:01:07
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 18, in <module>
+    from gui.steckdosen_panel import SteckdosenPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\steckdosen_panel.py", line 190
+    "V1 wirklich einschalten?
+    ^
+SyntaxError: unterminated string literal (detected at line 190)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T11:01:15
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 18, in <module>
+    from gui.steckdosen_panel import SteckdosenPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\steckdosen_panel.py", line 190
+    "V1 wirklich einschalten?
+    ^
+SyntaxError: unterminated string literal (detected at line 190)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T11:02:43
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 584, in _update_hw_status
+    for leds in [self._hw_leds, self._sb_leds]:
+                                ^^^^^^^^^^^^^
+AttributeError: 'Hauptfenster' object has no attribute '_sb_leds'. Did you mean: '_hw_leds'?
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T11:02:43
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 584, in _update_hw_status
+    for leds in [self._hw_leds, self._sb_leds]:
+                                ^^^^^^^^^^^^^
+AttributeError: 'Hauptfenster' object has no attribute '_sb_leds'. Did you mean: '_hw_leds'?
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T11:18:00
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\historien_fenster.py", line 185, in <lambda>
+    btn_druck.clicked.connect(lambda: self._datei_laden("druck"))
+                                      ~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\historien_fenster.py", line 277, in _datei_laden
+    self._neu_zeichnen()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\historien_fenster.py", line 327, in _neu_zeichnen
+    self._zeichne_druck(eintrag)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\historien_fenster.py", line 360, in _zeichne_druck
+    x = [t[j] for j, v in enumerate(werte) if v is not None and v > 0]
+         ~^^^
+IndexError: list index out of range
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T16:30:24
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 16, in <module>
+    from gui.druck_panel      import DruckPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\druck_panel.py", line 335
+    f"{naechster_name}
+    ^
+SyntaxError: unterminated f-string literal (detected at line 335)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T16:31:16
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 16, in <module>
+    from gui.druck_panel      import DruckPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\druck_panel.py", line 335
+    f"{naechster_name}
+    ^
+SyntaxError: unterminated f-string literal (detected at line 335)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-20T16:31:32
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 17, in <module>
+    from gui.temp_panel       import TempPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\temp_panel.py", line 261
+    f"{naechster_name}
+    ^
+SyntaxError: unterminated f-string literal (detected at line 261)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T12:22:51
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 21, in <module>
+    from gui.themes              import DARK_THEME, LIGHT_THEME, build_stylesheet
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\themes.py", line 523
+    }
+    ^
+SyntaxError: unmatched '}'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T12:23:00
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 21, in <module>
+    from gui.themes              import DARK_THEME, LIGHT_THEME, build_stylesheet
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\themes.py", line 523
+    }
+    ^
+SyntaxError: unmatched '}'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T12:24:04
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 21, in <module>
+    from gui.themes              import DARK_THEME, LIGHT_THEME, build_stylesheet
+ImportError: cannot import name 'LIGHT_THEME' from 'gui.themes' (C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\themes.py)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T12:41:55
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 206
+    self._btn_pdf.setToolTip("Tagesbericht als PDF erzeugen
+                             ^
+SyntaxError: unterminated string literal (detected at line 206)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T12:44:53
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 28, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 22, in main
+    fenster = Hauptfenster()
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 73, in __init__
+    self._zyklus_starten()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 492, in _zyklus_starten
+    self.log("System gestartet")
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 515, in log
+    farbe = farbe or t["log_info"]
+                     ~^^^^^^^^^^^^
+KeyError: 'log_info'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T12:46:49
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 28, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 22, in main
+    fenster = Hauptfenster()
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 73, in __init__
+    self._zyklus_starten()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 492, in _zyklus_starten
+    self.log("System gestartet")
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 515, in log
+    farbe = farbe or t["log_info"]
+                     ~^^^^^^^^^^^^
+KeyError: 'log_info'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T13:50:17
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 456
+    "PDF des Vortags wird jeden Morgen automatisch gedruckt.
+    ^
+SyntaxError: unterminated string literal (detected at line 456)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T15:38:01
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 28, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 22, in main
+    fenster = Hauptfenster()
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 73, in __init__
+    self._verbinde_signale()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 496, in _verbinde_signale
+    self._bridge.neue_temperaturen.connect(self._tcp_server.update_temp)
+                                           ^^^^^^^^^^^^^^^^
+AttributeError: 'Hauptfenster' object has no attribute '_tcp_server'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T17:51:29
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 28, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 22, in main
+    fenster = Hauptfenster()
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 72, in __init__
+    self._verbinde_signale()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 496, in _verbinde_signale
+    self.steckdosen_panel.set_kryo_an_check(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SteckdosenPanel' object has no attribute 'set_kryo_an_check'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-23T17:51:36
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 28, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 22, in main
+    fenster = Hauptfenster()
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 72, in __init__
+    self._verbinde_signale()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 496, in _verbinde_signale
+    self.steckdosen_panel.set_kryo_an_check(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SteckdosenPanel' object has no attribute 'set_kryo_an_check'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-24T10:00:30
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 13, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 1, in <module>
+    from .hauptfenster import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 18, in <module>
+    from gui.druck_panel      import DruckPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\druck_panel.py", line 17, in <module>
+    from gui.plot_fenster import DetachHelper, QTimer, pyqtSignal
+ImportError: cannot import name 'QTimer' from 'gui.plot_fenster' (C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\plot_fenster.py)
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-24T14:23:22
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 61, in <module>
+    clear_console()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 40, in clear_console
+    if platform.system() == "Windows":
+       ^^^^^^^^
+NameError: name 'platform' is not defined. Did you forget to import 'platform'?
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-24T15:39:24
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 41, in <module>
+    from gui import Hauptfenster
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\__init__.py", line 2, in <module>
+    from .kryo_status_panel import KryoStatusPanel
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\kryo_status_panel.py", line 167, in <module>
+    class KryoStatusPanel(QWidget):
+    ...<254 lines>...
+            self.bei_aktion = fn
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\kryo_status_panel.py", line 348, in KryoStatusPanel
+    threading.Thread(target=_run, daemon=True).start()
+                            ^^^^
+NameError: name '_run' is not defined
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-25T08:01:53
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 56, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 50, in main
+    fenster = Hauptfenster()
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 72, in __init__
+    self._verbinde_signale()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 496, in _verbinde_signale
+    self.steckdosen_panel.set_kryo_an_check(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SteckdosenPanel' object has no attribute 'set_kryo_an_check'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-26T11:03:01
+============================================================
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 875, in _run
+    lock = self._kryo_panel._schalt_lock
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'KryoStatusPanel' object has no attribute '_schalt_lock'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-26T11:07:44
+============================================================
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 875, in _run
+    lock = self._kryo_panel._schalt_lock
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'KryoStatusPanel' object has no attribute '_schalt_lock'
+
+============================================================
+UNBEHANDELTE EXCEPTION – 2026-03-26T11:09:01
+============================================================
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\hauptfenster.py", line 875, in _run
+    lock = self._kryo_panel._schalt_lock
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'KryoStatusPanel' object has no attribute '_schalt_lock'

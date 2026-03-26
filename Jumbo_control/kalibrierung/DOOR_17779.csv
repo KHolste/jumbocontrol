@@ -1,0 +1,36 @@
+# Kalibrierdaten Druckmessröhre
+# Sensor:      DOOR
+# Zertifikat:  17779
+# Datum:       2025-10
+# Quelle:      Kalibrierung am UHV Messstand
+# Methode:     log-lineare Interpolation
+# Einheit:     mbar
+# Spalten:     Messwert_mbar (MaxiGauge), Wahrer_Wert_mbar (Kalibriergerät KG)
+#
+Messwert_mbar,Wahrer_Wert_mbar
+7.18E-8,1.66E-7
+1.042E-6,1.69E-6
+1.468E-6,2.27E-6
+2.074E-6,3.05E-6
+3.066E-6,4.45E-6
+5.035E-6,7.17E-6
+7.072E-6,1.00E-5
+1.058E-5,1.48E-5
+1.505E-5,2.07E-5
+2.040E-5,2.78E-5
+3.024E-5,4.10E-5
+4.940E-5,6.85E-5
+6.937E-5,9.69E-5
+1.023E-4,1.43E-4
+1.495E-4,2.07E-4
+2.039E-4,2.71E-4
+2.945E-4,3.64E-4
+4.929E-4,5.51E-4
+6.950E-4,7.88E-4
+1.017E-3,1.18E-3
+1.509E-3,1.73E-3
+2.016E-3,2.26E-3
+3.054E-3,3.32E-3
+5.055E-3,5.22E-3
+7.097E-3,7.07E-3
+1.016E-2,1.02E-2

@@ -1,0 +1,36 @@
+Windows fatal exception: code 0xc0000374
+
+Current thread 0x00005f08 (most recent call first):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\kryo_status_panel.py", line 380 in _update_alle_ein_button
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\kryo_status_panel.py", line 330 in _run
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995 in run
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044 in _bootstrap_inner
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1015 in _bootstrap
+
+Thread 0x0000626c (most recent call first):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\steuerung\ablauf.py", line 182 in _loop
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995 in run
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044 in _bootstrap_inner
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1015 in _bootstrap
+
+Thread 0x00001550 (most recent call first):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 59 in main
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 63 in <module>
+Windows fatal exception: code 0xc0000420
+
+Thread 0x00005f08 (most recent call first):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\kryo_status_panel.py", line 380 in _update_alle_ein_button
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\gui\kryo_status_panel.py", line 330 in _run
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995 in run
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044 in _bootstrap_inner
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1015 in _bootstrap
+
+Thread 0x0000626c (most recent call first):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\steuerung\ablauf.py", line 182 in _loop
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 995 in run
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1044 in _bootstrap_inner
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\threading.py", line 1015 in _bootstrap
+
+Thread 0x00001550 (most recent call first):
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 59 in main
+  File "C:\Users\JumboControll\Desktop\pyJumbo\Jumbo_control\main.py", line 63 in <module>
