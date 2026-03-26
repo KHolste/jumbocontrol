@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_csv_schreiber.py tests/test_csv_leser.py -v --tb=short)"
+    ]
+  }
+}
