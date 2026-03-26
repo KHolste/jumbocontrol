@@ -131,3 +131,99 @@ def test_kein_alarm_wenn_ungueltig():
     m._pruefe_alarme(werte)
 
     assert ausgeloest == []
+
+
+# ── Alarm-Deduplizierung ──────────────────────────────────────
+
+def _messzyklus_mit_callbacks():
+    """Messzyklus mit Alarm- und Entwarnungs-Tracking."""
+    m = Messzyklus()
+    m._alarme      = []
+    m._entwarnungen = []
+    m.bei_alarm      = lambda name, wert: m._alarme.append((name, wert))
+    m.bei_entwarnung = lambda name, wert: m._entwarnungen.append((name, wert))
+    return m
+
+
+def test_wiederholter_alarm_wird_nicht_dupliziert():
+    """Gleicher Sensor über Schwelle in 3 aufeinanderfolgenden Zyklen → nur 1 Alarm."""
+    m = _messzyklus_mit_callbacks()
+    werte = {"T1": {"celsius": TEMP_ALARM_MAX + 5.0, "gueltig": True}}
+
+    m._pruefe_alarme(werte)  # Zyklus 1: Alarm eintritt
+    m._pruefe_alarme(werte)  # Zyklus 2: immer noch im Alarm
+    m._pruefe_alarme(werte)  # Zyklus 3: immer noch im Alarm
+
+    assert len(m._alarme) == 1, f"Alarm {len(m._alarme)}x statt 1x ausgelöst"
+
+
+def test_alarm_dann_normal_dann_alarm_ergibt_zwei_alarme():
+    """Sensor wechselt: Alarm → Normal → Alarm → muss 2x Alarm + 1x Entwarnung geben."""
+    m = _messzyklus_mit_callbacks()
+    alarm_werte  = {"T1": {"celsius": TEMP_ALARM_MAX + 5.0, "gueltig": True}}
+    normal_werte = {"T1": {"celsius": 20.0, "gueltig": True}}
+
+    m._pruefe_alarme(alarm_werte)    # Alarm eintritt
+    m._pruefe_alarme(normal_werte)   # Entwarnung
+    m._pruefe_alarme(alarm_werte)    # Alarm erneut
+
+    assert len(m._alarme) == 2
+    assert len(m._entwarnungen) == 1
+
+
+def test_entwarnung_bei_rueckkehr_in_normalbereich():
+    """Sensor geht von Alarm zurück zu Normal → Entwarnung wird ausgelöst."""
+    m = _messzyklus_mit_callbacks()
+
+    m._pruefe_alarme({"T1": {"celsius": TEMP_ALARM_MAX + 5.0, "gueltig": True}})
+    assert len(m._alarme) == 1
+    assert len(m._entwarnungen) == 0
+
+    m._pruefe_alarme({"T1": {"celsius": 20.0, "gueltig": True}})
+    assert len(m._entwarnungen) == 1
+    assert m._entwarnungen[0][0] == "T1"
+
+
+def test_mehrere_sensoren_unabhaengig():
+    """Verschiedene Sensoren werden unabhängig voneinander getrackt."""
+    m = _messzyklus_mit_callbacks()
+
+    # T1 im Alarm, T2 normal
+    m._pruefe_alarme({
+        "T1": {"celsius": TEMP_ALARM_MAX + 5.0, "gueltig": True},
+        "T2": {"celsius": 20.0, "gueltig": True},
+    })
+    assert len(m._alarme) == 1
+    assert m._alarme[0][0] == "T1"
+
+    # Zweiter Zyklus: T1 bleibt im Alarm, T2 geht in Alarm
+    m._pruefe_alarme({
+        "T1": {"celsius": TEMP_ALARM_MAX + 5.0, "gueltig": True},
+        "T2": {"celsius": TEMP_ALARM_MAX + 3.0, "gueltig": True},
+    })
+    assert len(m._alarme) == 2  # nur T2 ist neu
+    assert m._alarme[1][0] == "T2"
+
+
+def test_keine_entwarnung_ohne_vorherigen_alarm():
+    """Sensor der nie im Alarm war darf keine Entwarnung erzeugen."""
+    m = _messzyklus_mit_callbacks()
+
+    m._pruefe_alarme({"T1": {"celsius": 20.0, "gueltig": True}})
+    m._pruefe_alarme({"T1": {"celsius": 25.0, "gueltig": True}})
+
+    assert m._alarme == []
+    assert m._entwarnungen == []
+
+
+def test_ungueltig_waehrend_alarm_erzeugt_keine_entwarnung():
+    """Sensor wird ungültig während Alarm → Entwarnung, da nicht mehr im Alarm-Set."""
+    m = _messzyklus_mit_callbacks()
+
+    m._pruefe_alarme({"T1": {"celsius": TEMP_ALARM_MAX + 5.0, "gueltig": True}})
+    assert len(m._alarme) == 1
+
+    # Sensor wird ungültig (z.B. Ausreißer gefiltert)
+    m._pruefe_alarme({"T1": {"celsius": 99.0, "gueltig": False}})
+    # Ungültig → nicht im aktuelle Set → Entwarnung
+    assert len(m._entwarnungen) == 1

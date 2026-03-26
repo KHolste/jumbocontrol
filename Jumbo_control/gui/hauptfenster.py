@@ -30,6 +30,7 @@ class SignalBridge(QObject):
     neue_temperaturen = pyqtSignal(dict)
     neue_druecke      = pyqtSignal(dict)
     alarm             = pyqtSignal(str, float)
+    entwarnung        = pyqtSignal(str, float)
     hw_status         = pyqtSignal(dict)
     log_msg           = pyqtSignal(str, str)               # (text, farbe)
     sprung_alarm      = pyqtSignal(str, str, float, float) # (typ, name, wert, sprung)
@@ -500,6 +501,7 @@ class Hauptfenster(QMainWindow):
         self._bridge.neue_druecke.connect(self.druck_panel.aktualisieren)
         self._bridge.neue_druecke.connect(self.steckdosen_panel.update_druck)
         self._bridge.alarm.connect(self._zeige_alarm)
+        self._bridge.entwarnung.connect(self._zeige_entwarnung)
         self._bridge.hw_status.connect(self._update_hw_status)
         self._bridge.log_msg.connect(self.log)
         self._bridge.sprung_alarm.connect(self._zeige_sprung_alarm)
@@ -528,6 +530,7 @@ class Hauptfenster(QMainWindow):
         self._zyklus.bei_messung_temp  = self._bridge.neue_temperaturen.emit
         self._zyklus.bei_messung_druck = self._bridge.neue_druecke.emit
         self._zyklus.bei_alarm         = self._bridge.alarm.emit
+        self._zyklus.bei_entwarnung    = self._bridge.entwarnung.emit
         self._zyklus.bei_hw_status     = self._bridge.hw_status.emit
         self._zyklus.bei_sprung_alarm  = self._bridge.sprung_alarm.emit
         self._zyklus._alarm_einst      = self._alarm_einst
@@ -565,6 +568,9 @@ class Hauptfenster(QMainWindow):
 
     def _zeige_alarm(self, sensor: str, wert: float):
         self.log(f"⚠ ALARM: {sensor} = {wert:.2f} °C", farbe=self._theme["danger"])
+
+    def _zeige_entwarnung(self, sensor: str, wert: float):
+        self.log(f"✓ Entwarnung: {sensor} = {wert:.2f} °C", farbe=self._theme["log_ok"])
 
     def _startup_checks(self):
         """Prüft beim Start welche Hardware erreichbar ist und loggt den Status."""

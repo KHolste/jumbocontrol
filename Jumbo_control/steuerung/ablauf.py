@@ -47,12 +47,15 @@ class Messzyklus:
         self.bei_messung_temp    = None
         self.bei_messung_druck   = None
         self.bei_alarm           = None
+        self.bei_entwarnung      = None   # fn(name, wert) – Alarm vorbei
         self.bei_hw_status       = None
         self.bei_sprung_alarm    = None   # fn(typ, name, wert, sprung)
         self._aktiv              = False
         self._alarm_einst        = None   # wird von GUI gesetzt
         self._letzter_temp       = {}     # name → letzter Wert
         self._letzter_druck      = {}     # name → (wert, zeit)
+        self._aktive_temp_alarme = set()  # Sensornamen aktuell im Alarm
+        self._letzte_csv_warnung = 0.0    # Cooldown für CSV-Fehlermeldungen
         self._thread             = None
         self._temperatur         = None
         self._druck              = None
@@ -154,7 +157,9 @@ class Messzyklus:
                         try:
                             self._csv.speichere_temperaturen(t_werte)
                         except Exception as csv_e:
-                            print(f"[Messzyklus] Temperatur-CSV Fehler: {csv_e}")
+                            if time.time() - self._letzte_csv_warnung > 60:
+                                self._letzte_csv_warnung = time.time()
+                                print(f"[Messzyklus] Temperatur-CSV Fehler: {csv_e}")
                         self._pruefe_alarme(t_werte)
                         if self.bei_messung_temp:
                             self.bei_messung_temp(t_werte)
@@ -172,7 +177,9 @@ class Messzyklus:
                         try:
                             self._csv.speichere_druecke(d_werte)
                         except Exception as csv_e:
-                            print(f"[Messzyklus] Druck-CSV Fehler: {csv_e}")
+                            if time.time() - self._letzte_csv_warnung > 60:
+                                self._letzte_csv_warnung = time.time()
+                                print(f"[Messzyklus] Druck-CSV Fehler: {csv_e}")
                         if self.bei_messung_druck:
                             self.bei_messung_druck(d_werte)
                     except Exception as e:
@@ -273,14 +280,28 @@ class Messzyklus:
         return result
 
     def _pruefe_alarme(self, werte: dict):
-        if not self.bei_alarm:
-            return
+        aktuelle = set()
         for name, d in werte.items():
             if not d.get("gueltig"):
                 continue
             t = d.get("celsius")
             if t is not None and (t > TEMP_ALARM_MAX or t < TEMP_ALARM_MIN):
-                self.bei_alarm(name, t)
+                aktuelle.add(name)
+
+        # Neu eingetretene Alarme → melden
+        neue = aktuelle - self._aktive_temp_alarme
+        if self.bei_alarm:
+            for name in neue:
+                self.bei_alarm(name, werte[name]["celsius"])
+
+        # Beendete Alarme → Entwarnung
+        beendete = self._aktive_temp_alarme - aktuelle
+        if self.bei_entwarnung:
+            for name in beendete:
+                t = werte.get(name, {}).get("celsius")
+                self.bei_entwarnung(name, t if t is not None else 0.0)
+
+        self._aktive_temp_alarme = aktuelle
 
     def __enter__(self):
         self.starten()
