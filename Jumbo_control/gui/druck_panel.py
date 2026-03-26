@@ -50,7 +50,6 @@ class DruckPanel(QWidget):
         self._lines          = {}
         self._theme          = None
         self._einheit        = "mbar"
-        self._overrange_text = "Overrange"
         self._alarm_aktiv    = False
         self._alarm_grenze   = 1e-3
         self._blink_state    = False
@@ -74,9 +73,9 @@ class DruckPanel(QWidget):
 
         # ── Figure ────────────────────────────────────────────
         self._fig = Figure(figsize=(8, 2.5), dpi=100)
-        self._fig.patch.set_facecolor("#0f1117")
+        self._fig.patch.set_facecolor("#0f1520")
         self._ax  = self._fig.add_subplot(111)
-        self._ax.set_facecolor("#1a1d27")
+        self._ax.set_facecolor("#151d2e")
         self._canvas = FigureCanvas(self._fig)
         self._canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._toolbar = NavToolbar(self._canvas, self)
@@ -117,13 +116,41 @@ class DruckPanel(QWidget):
         toolbar_row_layout.setContentsMargins(0, 0, 0, 0)
         toolbar_row_layout.setSpacing(4)
         toolbar_row_layout.addWidget(self._toolbar, 1)
+
+        # Alarm-Controls (aus der Steuerungsleiste hierher verschoben)
+        self._chk_alarm = QCheckBox("Alarm ≥")
+        self._chk_alarm.stateChanged.connect(self._on_alarm)
+        self._chk_alarm.setToolTip("Alarm aktivieren wenn Druck den Grenzwert überschreitet")
+        toolbar_row_layout.addWidget(self._chk_alarm)
+        self._spn_alarm = QLineEdit("1e-3")
+        self._spn_alarm.setPlaceholderText("z.B. 1e-5")
+        self._spn_alarm.setFixedWidth(80)
+        self._spn_alarm.setEnabled(False)
+        self._spn_alarm.setToolTip("Alarmgrenze in mbar (z.B. 1e-5, 0.001)")
+        self._spn_alarm.textChanged.connect(self._alarm_grenze_setzen)
+        toolbar_row_layout.addWidget(self._spn_alarm)
+        toolbar_row_layout.addWidget(QLabel("mbar"))
+
+        # Kalibrierung-Button (aus der Steuerungsleiste hierher verschoben)
+        btn_kalib = QPushButton("Kalibrierung")
+        btn_kalib.setStyleSheet("""
+            QPushButton {
+                background: #4f8ef7; border: none; border-radius: 4px;
+                color: white; font-size: 10px; font-weight: 700; padding: 3px 10px;
+            }
+            QPushButton:hover { background: #2563eb; }
+        """)
+        btn_kalib.clicked.connect(self.kalib_geoeffnet.emit)
+        btn_kalib.setToolTip("Fenster mit kalibrierten Druckwerten öffnen")
+        toolbar_row_layout.addWidget(btn_kalib)
+
         self._btn_popout = QPushButton("⇱ Pop-out")
-        self._btn_popout.setFixedSize(110, 34)
+        self._btn_popout.setFixedSize(90, 30)
         self._btn_popout.setToolTip("Plot in eigenem Fenster öffnen")
         self._btn_popout.setStyleSheet("""
-            QPushButton { background: #1e2d45; border: 1.5px solid #4a5e80;
-                border-radius: 6px; color: #cbd5e1; font-size: 11px; font-weight: 700; }
-            QPushButton:hover { background: #2a3f5f; border-color: #7db2ff; color: #fff; }
+            QPushButton { background: #1e2d45; border: 1px solid #344868;
+                border-radius: 5px; color: #94a3bf; font-size: 10px; font-weight: 700; }
+            QPushButton:hover { background: #2a3f5f; border-color: #6ea8f7; color: #fff; }
         """)
         toolbar_row_layout.addWidget(self._btn_popout)
         plot_layout.addWidget(toolbar_row)
@@ -144,10 +171,10 @@ class DruckPanel(QWidget):
 
     def _build_steuerung(self) -> QWidget:
         widget = QWidget()
-        widget.setFixedHeight(38)
+        widget.setFixedHeight(34)
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(2, 0, 2, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(10)
 
         layout.addWidget(QLabel("Zeitbereich:"))
         self._modus = QComboBox()
@@ -184,49 +211,12 @@ class DruckPanel(QWidget):
         layout.addWidget(self._rb_lin)
 
         layout.addWidget(self._vsep())
-        layout.addWidget(QLabel("Overrange:"))
-        self._cmb_overrange = QComboBox()
-        self._cmb_overrange.addItems(["Overrange", "1013 mbar"])
-        self._cmb_overrange.setToolTip("Anzeige wenn Sensor im Overrange ist:\n'Overrange' = Text, '1013 mbar' = Atmosphärendruck als Wert")
-        self._cmb_overrange.currentTextChanged.connect(
-            lambda t: setattr(self, '_overrange_text', t)
-        )
-        layout.addWidget(self._cmb_overrange)
-
-        layout.addWidget(self._vsep())
-        self._chk_alarm = QCheckBox("Alarm ≥")
-        self._chk_alarm.stateChanged.connect(self._on_alarm)
-        self._chk_alarm.setToolTip("Alarm aktivieren wenn Druck den Grenzwert überschreitet")
-        layout.addWidget(self._chk_alarm)
-        self._spn_alarm = QLineEdit("1e-3")
-        self._spn_alarm.setPlaceholderText("z.B. 1e-5")
-        self._spn_alarm.setFixedWidth(80)
-        self._spn_alarm.setEnabled(False)
-        self._spn_alarm.setToolTip("Alarmgrenze in mbar (z.B. 1e-5, 0.001)")
-        self._spn_alarm.textChanged.connect(self._alarm_grenze_setzen)
-        layout.addWidget(self._spn_alarm)
-        layout.addWidget(QLabel("mbar"))
-
-        layout.addWidget(self._vsep())
-        btn_kalib = QPushButton("Kalibrierung")
-        btn_kalib.setStyleSheet("""
-            QPushButton {
-                background: #4f8ef7; border: none; border-radius: 4px;
-                color: white; font-size: 10px; font-weight: 700; padding: 3px 10px;
-            }
-            QPushButton:hover { background: #2563eb; }
-        """)
-        btn_kalib.clicked.connect(self.kalib_geoeffnet.emit)
-        btn_kalib.setToolTip("Fenster mit kalibrierten Druckwerten öffnen")
-        layout.addWidget(btn_kalib)
-
-        layout.addWidget(self._vsep())
         btn_einst = QPushButton("⚙ Einstellungen")
         btn_einst.setStyleSheet("""
             QPushButton {
-                background: #f1f5f9; border: 1.5px solid #94a3b8;
+                background: #f1f5f9; border: 1px solid #94a3b8;
                 border-radius: 4px; color: #334155;
-                font-size: 10px; font-weight: 700; padding: 3px 10px;
+                font-size: 10px; font-weight: 600; padding: 3px 10px;
             }
             QPushButton:hover { border-color: #2563eb; color: #2563eb; }
         """)
@@ -241,7 +231,8 @@ class DruckPanel(QWidget):
         f = QFrame()
         f.setFrameShape(QFrame.Shape.VLine)
         f.setFixedWidth(1)
-        f.setStyleSheet("color: #cbd5e1;")
+        # Erbt Farbe aus globalem Theme-Stylesheet (border-Farbe via palette)
+        f.setStyleSheet("color: palette(mid);")
         return f
 
     def _build_anzeigen(self) -> QWidget:
@@ -276,7 +267,7 @@ class DruckPanel(QWidget):
                     border-left: 1px solid {farbe}33;
                     border-radius: 3px;
                     margin-top: 12px; padding-top: 8px;
-                    background: #1a1d2788;
+                    background: #1b253888;
                 }}
                 QGroupBox::title {{ subcontrol-origin: margin; left: 6px; color: {farbe}; font-size: 11px; }}
             """)
@@ -382,7 +373,7 @@ class DruckPanel(QWidget):
 
     def apply_theme(self, t: dict):
         self._theme = t
-        dark = t.get("bg") == "#0f1117"
+        dark = t.get("bg", "").startswith("#0") or t.get("bg", "").startswith("#1")
         bg    = t["bg"]
         panel = t["panel"]
         text  = t["text"]
@@ -397,10 +388,10 @@ class DruckPanel(QWidget):
         self._ax.grid(True, color=grid, linewidth=0.6, alpha=0.5)
         leg = self._ax.get_legend()
         if leg:
-            leg.get_frame().set_facecolor("#1a1d27" if dark else "#ffffff")
-            leg.get_frame().set_edgecolor("#3a3f58" if dark else "#c0c5d4")
+            leg.get_frame().set_facecolor(panel if dark else "#ffffff")
+            leg.get_frame().set_edgecolor(grid if dark else "#c9d3e2")
             for txt in leg.get_texts():
-                txt.set_color("#f0f2fa" if dark else "#12151f")
+                txt.set_color(text)
         self._canvas.draw_idle()
         from gui.themes import matplotlib_toolbar_style
         matplotlib_toolbar_style(self._toolbar, dark=dark)
@@ -428,12 +419,8 @@ class DruckPanel(QWidget):
             lbl, status_lbl, farbe, _ = self._anzeigen[name]
 
             if is_overrange:
-                if self._overrange_text == "1013 mbar":
-                    lbl.setText(f"{self._umrechnen(OVERRANGE_MBAR):.2E}")
-                    status_lbl.setText(f"{self._einheit}  ·  {status}")
-                else:
-                    lbl.setText("Overrange")
-                    status_lbl.setText(status)
+                lbl.setText("Overrange")
+                status_lbl.setText(status)
                 if self._alarm_aktiv:
                     neue_alarme.add(name)
             elif val is not None:

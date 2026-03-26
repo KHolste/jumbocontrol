@@ -156,12 +156,11 @@ class Hauptfenster(QMainWindow):
         splitter.addWidget(links)
 
         rechts_panel = self._build_log_panel()
-        rechts_panel.setStyleSheet("font-size: 13px;")
         splitter.addWidget(rechts_panel)
 
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([980, 420])
+        splitter.setStretchFactor(0, 5)
+        splitter.setStretchFactor(1, 2)
+        splitter.setSizes([900, 500])
         haupt.addWidget(splitter)
 
     def _build_header(self) -> QWidget:
@@ -268,7 +267,7 @@ class Hauptfenster(QMainWindow):
 
     def _build_log_panel(self) -> QWidget:
         widget = QWidget()
-        widget.setMinimumWidth(260)
+        widget.setMinimumWidth(200)
         outer = QVBoxLayout(widget)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)

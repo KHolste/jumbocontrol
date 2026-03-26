@@ -6,43 +6,43 @@ Korrigierte Theme-Datei mit vollständigen Keys und dunkler Matplotlib-Toolbar.
 from PyQt6.QtCore import QSize
 
 DARK_THEME = {
-    "bg":       "#0b1220",
-    "panel":    "#121b2b",
-    "card":     "#182336",
-    "border":   "#2c3a57",
-    "border2":  "#415277",
-    "accent":   "#7db2ff",
+    "bg":       "#0f1520",
+    "panel":    "#151d2e",
+    "card":     "#1b2538",
+    "border":   "#243049",
+    "border2":  "#344868",
+    "accent":   "#6ea8f7",
     "accent2":  "#2dd4bf",
-    "accent3":  "#fbbf24",
-    "danger":   "#fb7185",
-    "text":     "#edf2ff",
-    "text_sec": "#b3c0dc",
-    "text_dim": "#7f8daa",
-    "log_info": "#edf2ff",
+    "accent3":  "#f0b429",
+    "danger":   "#f87181",
+    "text":     "#e8edf5",
+    "text_sec": "#94a3bf",
+    "text_dim": "#5f7089",
+    "log_info": "#e8edf5",
     "log_ok":   "#34d399",
     "log_warn": "#fbbf24",
-    "log_err":  "#fb7185",
-    "log_stamp":"#8ec5ff",
+    "log_err":  "#f87181",
+    "log_stamp":"#7baaf0",
 }
 
 LIGHT_THEME = {
-    "bg":       "#f3f6fb",
-    "panel":    "#e9eef8",
+    "bg":       "#f0f2f7",
+    "panel":    "#e3e8f0",
     "card":     "#ffffff",
-    "border":   "#d9e2f1",
-    "border2":  "#c0cee3",
+    "border":   "#c9d3e2",
+    "border2":  "#a8b8cf",
     "accent":   "#2563eb",
-    "accent2":  "#0f766e",
-    "accent3":  "#c2410c",
-    "danger":   "#e11d48",
-    "text":     "#111827",
-    "text_sec": "#667085",
-    "text_dim": "#8a94a6",
-    "log_info": "#111827",
+    "accent2":  "#0d9488",
+    "accent3":  "#b45309",
+    "danger":   "#dc2626",
+    "text":     "#1a1f2e",
+    "text_sec": "#536075",
+    "text_dim": "#8392a7",
+    "log_info": "#1a1f2e",
     "log_ok":   "#0f766e",
     "log_warn": "#b45309",
-    "log_err":  "#be123c",
-    "log_stamp":"#475467",
+    "log_err":  "#dc2626",
+    "log_stamp":"#3d5068",
 }
 
 def build_stylesheet(t: dict) -> str:
@@ -84,9 +84,9 @@ QPushButton {{
     background-color: {t['card']};
     color: {t['text']};
     border: 1px solid {t['border']};
-    border-radius: 12px;
-    padding: 9px 16px;
-    min-height: 24px;
+    border-radius: 7px;
+    padding: 7px 14px;
+    min-height: 22px;
     font-weight: 600;
 }}
 
@@ -112,9 +112,9 @@ QPushButton#pdfButton,
 QPushButton#fullscreenButton {{
     color: #ffffff;
     border: none;
-    border-radius: 10px;
-    padding: 0 18px;
-    min-height: 34px;
+    border-radius: 7px;
+    padding: 0 16px;
+    min-height: 32px;
     font-size: 12px;
     font-weight: 700;
 }}
@@ -136,8 +136,8 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateTimeEdit, QTextEdit, QPlain
     background-color: {t['card']};
     color: {t['text']};
     border: 1px solid {t['border']};
-    border-radius: 10px;
-    padding: 8px 10px;
+    border-radius: 6px;
+    padding: 6px 10px;
     selection-background-color: {t['accent']};
     selection-color: #ffffff;
 }}
@@ -160,26 +160,26 @@ QTabWidget::pane {{
 QTabBar::tab {{
     background: {t['panel']};
     color: {t['text_sec']};
-    border: 2px solid {t['border']};
-    padding: 6px 12px;
-    margin-right: 4px;
-    border-radius: 9px;
+    border: 1px solid {t['border']};
+    padding: 6px 14px;
+    margin-right: 3px;
+    border-radius: 6px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     min-width: 70px;
 }}
 
 QTabBar::tab:selected {{
     background: {t['accent']};
     color: #ffffff;
-    border: 2px solid {t['accent']};
+    border: 1px solid {t['accent']};
     margin-bottom: -1px;
 }}
 
 QTabBar::tab:hover:!selected {{
     background: {t['card']};
     color: {t['text']};
-    border: 2px solid {border2};
+    border: 1px solid {border2};
 }}
 
 QStatusBar {{
@@ -251,10 +251,10 @@ QRadioButton::indicator:checked {{
 QSpinBox::up-button, QDoubleSpinBox::up-button, QDateTimeEdit::up-button {{
     subcontrol-origin: border;
     subcontrol-position: top right;
-    width: 24px;
+    width: 22px;
     background: {t['panel']};
     border-left: 1px solid {t['border']};
-    border-top-right-radius: 9px;
+    border-top-right-radius: 5px;
 }}
 QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateTimeEdit::up-button:hover {{
     background: {border2};
@@ -262,10 +262,10 @@ QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateTimeEdit::up-bu
 QSpinBox::down-button, QDoubleSpinBox::down-button, QDateTimeEdit::down-button {{
     subcontrol-origin: border;
     subcontrol-position: bottom right;
-    width: 24px;
+    width: 22px;
     background: {t['panel']};
     border-left: 1px solid {t['border']};
-    border-bottom-right-radius: 9px;
+    border-bottom-right-radius: 5px;
 }}
 QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QDateTimeEdit::down-button:hover {{
     background: {border2};
@@ -293,10 +293,10 @@ QSpinBox::down-arrow:hover, QDoubleSpinBox::down-arrow:hover, QDateTimeEdit::dow
 QComboBox::drop-down {{
     subcontrol-origin: padding;
     subcontrol-position: center right;
-    width: 24px;
+    width: 22px;
     border-left: 1px solid {t['border']};
-    border-top-right-radius: 9px;
-    border-bottom-right-radius: 9px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
     background: {t['panel']};
 }}
 QComboBox::drop-down:hover {{
@@ -458,33 +458,33 @@ def matplotlib_toolbar_style(toolbar, dark: bool = True):
     if dark:
         toolbar.setStyleSheet("""
             QToolBar {
-                background: #0f172a;
+                background: #111827;
                 border: 1px solid #1e293b;
-                border-radius: 10px;
-                spacing: 4px;
-                padding: 5px 8px;
+                border-radius: 6px;
+                spacing: 3px;
+                padding: 4px 6px;
             }
             QToolButton {
                 background: transparent;
                 border: 1px solid transparent;
-                border-radius: 8px;
-                padding: 5px;
-                min-width: 30px;
-                min-height: 30px;
-                color: #cbd5e1;
+                border-radius: 5px;
+                padding: 4px;
+                min-width: 28px;
+                min-height: 28px;
+                color: #94a3bf;
             }
             QToolButton:hover {
                 background: #1e293b;
-                border-color: #334155;
+                border-color: #2d3d56;
             }
             QToolButton:pressed,
             QToolButton:checked {
-                background: #2563eb;
-                border-color: #2563eb;
+                background: #1d4ed8;
+                border-color: #1d4ed8;
                 color: #ffffff;
             }
             QToolBar QLabel {
-                color: #94a3b8;
+                color: #7f8daa;
                 font-size: 11px;
                 font-weight: 600;
                 padding-left: 6px;
@@ -494,35 +494,35 @@ def matplotlib_toolbar_style(toolbar, dark: bool = True):
     else:
         toolbar.setStyleSheet("""
             QToolBar {
-                background: #f8fafc;
-                border: 1px solid #d8dee8;
-                border-radius: 10px;
-                spacing: 4px;
-                padding: 5px 8px;
+                background: #e8ecf4;
+                border: 1px solid #c9d3e2;
+                border-radius: 6px;
+                spacing: 3px;
+                padding: 4px 6px;
             }
             QToolButton {
                 background: transparent;
                 border: 1px solid transparent;
-                border-radius: 8px;
-                padding: 5px;
-                min-width: 30px;
-                min-height: 30px;
-                color: #0f172a;
+                border-radius: 5px;
+                padding: 4px;
+                min-width: 28px;
+                min-height: 28px;
+                color: #1a1f2e;
             }
             QToolButton:hover {
                 background: #ffffff;
-                border-color: #c5d0df;
+                border-color: #b0bdd0;
             }
             QToolButton:pressed,
             QToolButton:checked {
                 background: #dbeafe;
                 border-color: #93c5fd;
-                color: #0f172a;
+                color: #1a1f2e;
             }
             QToolBar QLabel {
-                color: #334155;
+                color: #536075;
                 font-size: 11px;
-                font-weight: 700;
+                font-weight: 600;
                 padding-left: 6px;
                 min-width: 120px;
             }

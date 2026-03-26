@@ -47,7 +47,11 @@ class DruckGrossanzeige(QWidget):
         self._font_size = _FONT_DEF
         self._anzeigen  = {}   # name → (wert_lbl, status_lbl, farbe)
         self._build_ui()
-        self.setStyleSheet("background: #0f1117; color: #f0f2fa;")
+        # Theme-Farben aus themes.py übernehmen
+        from gui.themes import DARK_THEME
+        self.setStyleSheet(
+            f"background: {DARK_THEME['bg']}; color: {DARK_THEME['text']};"
+        )
 
     # ── UI ────────────────────────────────────────────────────
     def _build_ui(self):
@@ -87,7 +91,7 @@ class DruckGrossanzeige(QWidget):
                     border-left: 1px solid {farbe}33;
                     border-radius: 3px;
                     margin-top: 14px; padding-top: 8px;
-                    background: #1a1d2799;
+                    background: #1b253899;
                 }}
                 QGroupBox::title {{
                     subcontrol-origin: margin; left: 8px; color: {farbe};
