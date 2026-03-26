@@ -196,6 +196,216 @@ QStatusBar QLabel {{
     font-weight: 600;
     padding: 0 6px;
 }}
+
+/* ── QCheckBox ──────────────────────────────────────────── */
+QCheckBox {{
+    spacing: 8px;
+    color: {t['text']};
+    background: transparent;
+}}
+QCheckBox::indicator {{
+    width: 18px;
+    height: 18px;
+    border: 2px solid {border2};
+    border-radius: 4px;
+    background: {t['card']};
+}}
+QCheckBox::indicator:hover {{
+    border-color: {t['accent']};
+}}
+QCheckBox::indicator:checked {{
+    background-color: {t['accent']};
+    border-color: {t['accent']};
+}}
+QCheckBox::indicator:checked:hover {{
+    background-color: {t['accent']};
+    border-color: {t['text']};
+}}
+QCheckBox::indicator:disabled {{
+    background: {t['panel']};
+    border-color: {t['border']};
+}}
+
+/* ── QRadioButton ───────────────────────────────────────── */
+QRadioButton {{
+    spacing: 6px;
+    color: {t['text']};
+    background: transparent;
+}}
+QRadioButton::indicator {{
+    width: 16px;
+    height: 16px;
+    border: 2px solid {border2};
+    border-radius: 9px;
+    background: {t['card']};
+}}
+QRadioButton::indicator:hover {{
+    border-color: {t['accent']};
+}}
+QRadioButton::indicator:checked {{
+    background-color: {t['accent']};
+    border-color: {t['accent']};
+}}
+
+/* ── QSpinBox / QDoubleSpinBox / QDateTimeEdit Buttons ── */
+QSpinBox::up-button, QDoubleSpinBox::up-button, QDateTimeEdit::up-button {{
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 24px;
+    background: {t['panel']};
+    border-left: 1px solid {t['border']};
+    border-top-right-radius: 9px;
+}}
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateTimeEdit::up-button:hover {{
+    background: {border2};
+}}
+QSpinBox::down-button, QDoubleSpinBox::down-button, QDateTimeEdit::down-button {{
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 24px;
+    background: {t['panel']};
+    border-left: 1px solid {t['border']};
+    border-bottom-right-radius: 9px;
+}}
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QDateTimeEdit::down-button:hover {{
+    background: {border2};
+}}
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateTimeEdit::up-arrow {{
+    width: 8px; height: 8px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid {t['text_sec']};
+}}
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow, QDateTimeEdit::down-arrow {{
+    width: 8px; height: 8px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid {t['text_sec']};
+}}
+QSpinBox::up-arrow:hover, QDoubleSpinBox::up-arrow:hover, QDateTimeEdit::up-arrow:hover {{
+    border-bottom-color: {t['accent']};
+}}
+QSpinBox::down-arrow:hover, QDoubleSpinBox::down-arrow:hover, QDateTimeEdit::down-arrow:hover {{
+    border-top-color: {t['accent']};
+}}
+
+/* ── QComboBox Dropdown ─────────────────────────────────── */
+QComboBox::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 24px;
+    border-left: 1px solid {t['border']};
+    border-top-right-radius: 9px;
+    border-bottom-right-radius: 9px;
+    background: {t['panel']};
+}}
+QComboBox::drop-down:hover {{
+    background: {border2};
+}}
+QComboBox::down-arrow {{
+    width: 8px; height: 8px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid {t['text_sec']};
+}}
+QComboBox::down-arrow:hover {{
+    border-top-color: {t['accent']};
+}}
+QComboBox QAbstractItemView {{
+    background: {t['card']};
+    color: {t['text']};
+    border: 1px solid {border2};
+    selection-background-color: {t['accent']};
+    selection-color: #ffffff;
+    outline: none;
+}}
+
+/* ── QGroupBox ──────────────────────────────────────────── */
+QGroupBox {{
+    border: 1px solid {t['border']};
+    border-radius: 6px;
+    margin-top: 14px;
+    padding-top: 10px;
+    background: transparent;
+}}
+QGroupBox::title {{
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 6px;
+    color: {t['text_sec']};
+    font-weight: 700;
+    font-size: 11px;
+}}
+
+/* ── QScrollBar Vertical ────────────────────────────────── */
+QScrollBar:vertical {{
+    background: {t['panel']};
+    width: 10px;
+    border-radius: 5px;
+    margin: 0;
+}}
+QScrollBar::handle:vertical {{
+    background: {border2};
+    border-radius: 5px;
+    min-height: 30px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {t['accent']};
+}}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0;
+}}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: none;
+}}
+
+/* ── QScrollBar Horizontal ──────────────────────────────── */
+QScrollBar:horizontal {{
+    background: {t['panel']};
+    height: 10px;
+    border-radius: 5px;
+    margin: 0;
+}}
+QScrollBar::handle:horizontal {{
+    background: {border2};
+    border-radius: 5px;
+    min-width: 30px;
+}}
+QScrollBar::handle:horizontal:hover {{
+    background: {t['accent']};
+}}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+    width: 0;
+}}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+    background: none;
+}}
+
+/* ── QSplitter Handle ───────────────────────────────────── */
+QSplitter::handle {{
+    background: {t['border']};
+}}
+QSplitter::handle:hover {{
+    background: {t['accent']};
+}}
+QSplitter::handle:vertical {{
+    height: 3px;
+    margin: 2px 0;
+}}
+QSplitter::handle:horizontal {{
+    width: 3px;
+    margin: 0 2px;
+}}
+
+/* ── QToolTip ───────────────────────────────────────────── */
+QToolTip {{
+    background: {t['card']};
+    color: {t['text']};
+    border: 1px solid {border2};
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+}}
 """
 
 def matplotlib_dark_style(fig, *axes):

@@ -5,7 +5,8 @@
       "Bash(del \"C:\\\\Users\\\\JumboControll\\\\Desktop\\\\pyJumbo\\\\Jumbo_control\\\\gui\\\\sicherung\\\\__init__.py\")",
       "Bash(del \"C:\\\\Users\\\\JumboControll\\\\Desktop\\\\pyJumbo\\\\Jumbo_control\\\\config_coolpack_vorschlag.py\")",
       "Bash(python -m pytest tests/test_csv_schreiber.py tests/test_csv_leser.py -q)",
-      "Bash(python -m pytest tests/test_ablauf_logik.py -v)"
+      "Bash(python -m pytest tests/test_ablauf_logik.py -v)",
+      "Bash(python -m pytest tests/ -v)"
     ]
   }
 }
