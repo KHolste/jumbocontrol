@@ -1,8 +1,11 @@
 """
 gui/alarm_einstellungen.py
 Einstellungsfenster für Alarm- und Ausreißer-Schwellen.
+Persistiert Einstellungen in JSON (daten/logs/alarm_einstellungen.json).
 """
 
+import json
+import os
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QCheckBox, QDoubleSpinBox, QTabWidget, QWidget,
@@ -10,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLineEdit
 )
 from PyQt6.QtCore import Qt
+from config import LOG_PFAD
 
 
 # ── Standardwerte ─────────────────────────────────────────────
@@ -28,13 +32,58 @@ DEFAULTS = {
     }
 }
 
+_JSON_PFAD = os.path.join(LOG_PFAD, "alarm_einstellungen.json")
+
+
+def _validiere(daten: dict) -> dict:
+    """Validiert geladene Daten gegen DEFAULTS – fehlende/ungültige Keys → Default."""
+    ergebnis = {}
+    for bereich in ("temp", "druck"):
+        ergebnis[bereich] = {}
+        defaults = DEFAULTS[bereich]
+        section = daten.get(bereich, {})
+        if not isinstance(section, dict):
+            section = {}
+        for key, default in defaults.items():
+            val = section.get(key, default)
+            # Typprüfung: bool-Keys müssen bool sein, float-Keys positiv
+            if isinstance(default, bool):
+                ergebnis[bereich][key] = bool(val)
+            elif isinstance(default, (int, float)):
+                try:
+                    val = float(val)
+                    ergebnis[bereich][key] = val if val > 0 else default
+                except (TypeError, ValueError):
+                    ergebnis[bereich][key] = default
+    return ergebnis
+
 
 class AlarmEinstellungen:
-    """Hält die aktuellen Alarm- und Filter-Einstellungen."""
+    """Hält die aktuellen Alarm- und Filter-Einstellungen. Lädt/speichert JSON."""
 
     def __init__(self):
-        self.temp  = dict(DEFAULTS["temp"])
-        self.druck = dict(DEFAULTS["druck"])
+        daten = self._laden()
+        self.temp  = daten["temp"]
+        self.druck = daten["druck"]
+
+    def _laden(self) -> dict:
+        """Lädt aus JSON, fällt auf DEFAULTS zurück bei Fehler."""
+        try:
+            if os.path.exists(_JSON_PFAD):
+                with open(_JSON_PFAD, "r", encoding="utf-8") as f:
+                    return _validiere(json.load(f))
+        except Exception:
+            pass
+        return _validiere({})
+
+    def speichern(self):
+        """Persistiert aktuelle Werte nach JSON."""
+        os.makedirs(os.path.dirname(_JSON_PFAD), exist_ok=True)
+        daten = {"temp": dict(self.temp), "druck": dict(self.druck)}
+        tmp = _JSON_PFAD + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(daten, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, _JSON_PFAD)  # Atomar auf Windows/NTFS
 
 
 class AlarmEinstellungenDialog(QDialog):
@@ -172,6 +221,7 @@ class AlarmEinstellungenDialog(QDialog):
         self._e.druck["sprung_alarm_dekaden"] = self._spn_druck_alarm.value()
         self._e.druck["ausreisser_aktiv"]     = self._chk_druck_ausreisser.isChecked()
         self._e.druck["ausreisser_dekaden"]   = self._spn_druck_ausreisser.value()
+        self._e.speichern()
         self.accept()
 
     def _defaults(self):

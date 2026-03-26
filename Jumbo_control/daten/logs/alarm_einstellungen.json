@@ -1,0 +1,14 @@
+{
+  "temp": {
+    "sprung_alarm_aktiv": true,
+    "sprung_alarm_grad": 10.0,
+    "ausreisser_aktiv": true,
+    "ausreisser_grad": 50.0
+  },
+  "druck": {
+    "sprung_alarm_aktiv": true,
+    "sprung_alarm_dekaden": 1.0,
+    "ausreisser_aktiv": true,
+    "ausreisser_dekaden": 3.0
+  }
+}

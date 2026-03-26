@@ -78,12 +78,48 @@ class CsvSchreiber:
         return os.path.join(self._pfad, f"{datum}_{typ}.csv")
 
     def _schreibe_zeile(self, datei: str, header: list, zeile: list):
+        """
+        Schreibt eine Zeile in die CSV-Datei.
+        Bei gesperrter Datei (z.B. Excel) → Fallback in .pending-Datei,
+        damit keine Messdaten verloren gehen.
+        """
         neu = not os.path.exists(datei)
-        with open(datei, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f, delimiter="\t")
-            if neu:
-                writer.writerow(header)
-            writer.writerow(zeile)
+        try:
+            with open(datei, "a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f, delimiter="\t")
+                if neu:
+                    writer.writerow(header)
+                writer.writerow(zeile)
+                f.flush()
+                os.fsync(f.fileno())
+            # Nach erfolgreichem Schreiben: pending-Daten nachholen
+            self._merge_pending(datei, header)
+        except PermissionError:
+            # Datei gesperrt → in .pending-Datei sichern
+            pending = datei + ".pending"
+            with open(pending, "a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f, delimiter="\t")
+                writer.writerow(zeile)
+                f.flush()
+
+    def _merge_pending(self, datei: str, header: list):
+        """Holt Zeilen aus .pending-Datei nach und löscht sie."""
+        pending = datei + ".pending"
+        if not os.path.exists(pending):
+            return
+        try:
+            with open(pending, "r", encoding="utf-8") as pf:
+                zeilen = pf.read().strip()
+            if not zeilen:
+                os.remove(pending)
+                return
+            with open(datei, "a", newline="", encoding="utf-8") as f:
+                f.write(zeilen + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.remove(pending)
+        except Exception:
+            pass  # Nächster Zyklus versucht es erneut
 
     def speichere_temperaturen(self, werte: dict):
         """

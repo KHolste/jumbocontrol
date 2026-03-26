@@ -227,3 +227,71 @@ def test_ungueltig_waehrend_alarm_erzeugt_keine_entwarnung():
     m._pruefe_alarme({"T1": {"celsius": 99.0, "gueltig": False}})
     # Ungültig → nicht im aktuelle Set → Entwarnung
     assert len(m._entwarnungen) == 1
+
+
+# ── Ausreißer: Filterung aktiv, aber kein GUI-Log ────────────
+
+def test_ausreisser_wird_gefiltert_aber_nicht_geloggt():
+    """Ausreißer werden intern gefiltert (gueltig=False), erzeugen aber
+    über den bei_sprung_alarm-Callback nur den Typ 'temp_ausreisser'.
+    Der GUI-Handler _zeige_sprung_alarm ignoriert diesen Typ jetzt."""
+    m = _messzyklus_mit_einst(ausreisser_aktiv=True, ausreisser_grad=10.0)
+    sprung_events = []
+    m.bei_sprung_alarm = lambda typ, name, wert, sprung: sprung_events.append(typ)
+
+    m._letzter_temp["T1"] = 20.0
+    werte = {"T1": {"celsius": 80.0, "kelvin": 353.15, "gueltig": True}}
+
+    result = m._pruefe_temp_spruenge(werte)
+
+    # Filterung funktioniert weiterhin
+    assert result["T1"]["gueltig"] is False
+    assert result["T1"]["celsius"] is None
+    # Callback wurde gefeuert mit Typ "temp_ausreisser"
+    assert sprung_events == ["temp_ausreisser"]
+
+
+def test_sprung_alarm_wird_weiterhin_geloggt():
+    """Sprung-Alarm (unterhalb Ausreißer-Schwelle) wird weiterhin via Callback gemeldet."""
+    m = _messzyklus_mit_einst(
+        ausreisser_aktiv=True, ausreisser_grad=50.0,
+        sprung_alarm_aktiv=True, sprung_alarm_grad=5.0,
+    )
+    sprung_events = []
+    m.bei_sprung_alarm = lambda typ, name, wert, sprung: sprung_events.append(typ)
+
+    m._letzter_temp["T1"] = 20.0
+    # Sprung 12°C: > sprung_alarm_grad (5.0) aber < ausreisser_grad (50.0)
+    werte = {"T1": {"celsius": 32.0, "kelvin": 305.15, "gueltig": True}}
+
+    result = m._pruefe_temp_spruenge(werte)
+
+    # Wert bleibt gültig (kein Ausreißer)
+    assert result["T1"]["gueltig"] is True
+    # Callback wurde mit "temp_alarm" gefeuert (dieser Typ WIRD im GUI geloggt)
+    assert sprung_events == ["temp_alarm"]
+
+
+def test_gui_handler_ignoriert_ausreisser_typen():
+    """Simuliert den GUI-Handler: nur temp_alarm und druck_alarm erzeugen Log-Einträge."""
+    # Nachbildung der _zeige_sprung_alarm-Logik aus hauptfenster.py
+    gui_log = []
+
+    def fake_zeige_sprung_alarm(typ, name, wert, sprung):
+        if typ == "temp_alarm":
+            gui_log.append(f"Temperatursprung: {name}")
+        elif typ == "druck_alarm":
+            gui_log.append(f"Drucksprung: {name}")
+        # temp_ausreisser und druck_ausreisser → kein Log
+
+    # Ausreißer-Typen → kein Log
+    fake_zeige_sprung_alarm("temp_ausreisser", "T1", 80.0, 60.0)
+    fake_zeige_sprung_alarm("druck_ausreisser", "CENT", 1e-2, 5.0)
+    assert gui_log == []
+
+    # Alarm-Typen → Log
+    fake_zeige_sprung_alarm("temp_alarm", "T1", 30.0, 12.0)
+    fake_zeige_sprung_alarm("druck_alarm", "CENT", 1e-4, 1.5)
+    assert len(gui_log) == 2
+    assert "Temperatursprung" in gui_log[0]
+    assert "Drucksprung" in gui_log[1]

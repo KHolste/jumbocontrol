@@ -80,17 +80,19 @@ class Messzyklus:
     def stoppen(self):
         self._aktiv = False
         if self._thread:
-            self._thread.join(timeout=10)
-        if self._temperatur:
-            try:
-                self._temperatur.beenden()
-            except Exception:
-                pass
-        if self._druck:
-            try:
-                self._druck.beenden()
-            except Exception:
-                pass
+            self._thread.join(timeout=30)
+            if self._thread.is_alive():
+                print("[Messzyklus] Warnung: Thread-Shutdown Timeout nach 30s")
+        # Hardware einzeln freigeben – jeder Schritt unabhängig
+        for label, geraet in [("cDAQ", self._temperatur), ("Druck", self._druck)]:
+            if geraet is not None:
+                try:
+                    geraet.beenden()
+                    print(f"[Messzyklus] {label} freigegeben")
+                except Exception as e:
+                    print(f"[Messzyklus] {label} Freigabe-Fehler: {e}")
+        self._temperatur = None
+        self._druck = None
         print("[Messzyklus] Gestoppt.")
 
     # ── Verbindungsaufbau ─────────────────────────────────────
@@ -231,7 +233,6 @@ class Messzyklus:
             if name in self._letzter_temp:
                 sprung = abs(wert - self._letzter_temp[name])
                 if te["ausreisser_aktiv"] and sprung > te["ausreisser_grad"]:
-                    print(f"[Messzyklus] Ausreißer gefiltert: {name} Sprung={sprung:.1f}°C")
                     if self.bei_sprung_alarm:
                         self.bei_sprung_alarm("temp_ausreisser", name, wert, sprung)
                     result[name] = {**d, "gueltig": False, "celsius": None,
@@ -264,7 +265,6 @@ class Messzyklus:
                     try:
                         dekaden_s = abs(math.log10(wert) - math.log10(alt_wert)) / dt
                         if de["ausreisser_aktiv"] and dekaden_s > de["ausreisser_dekaden"]:
-                            print(f"[Messzyklus] Druck-Ausreißer gefiltert: {name} {dekaden_s:.1f} Dek/s")
                             if self.bei_sprung_alarm:
                                 self.bei_sprung_alarm("druck_ausreisser", name, wert, dekaden_s)
                             result[name] = {**d, "gueltig": False, "mbar": None,

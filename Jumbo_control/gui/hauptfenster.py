@@ -701,20 +701,10 @@ class Hauptfenster(QMainWindow):
                 f"⚠ Temperatursprung: {name} = {wert:.1f} °C (Δ {sprung:.1f} °C)",
                 farbe=self._theme["log_warn"]
             )
-        elif typ == "temp_ausreisser":
-            self.log(
-                f"⚠ Temperatur-Ausreißer gefiltert: {name} = {wert:.1f} °C (Δ {sprung:.1f} °C)",
-                farbe=self._theme["danger"]
-            )
         elif typ == "druck_alarm":
             self.log(
                 f"⚠ Drucksprung: {name} = {wert:.2E} mbar ({sprung:.1f} Dek/s)",
                 farbe=self._theme["log_warn"]
-            )
-        elif typ == "druck_ausreisser":
-            self.log(
-                f"⚠ Druck-Ausreißer gefiltert: {name} = {wert:.2E} mbar ({sprung:.1f} Dek/s)",
-                farbe=self._theme["danger"]
             )
 
     def _zeige_bild(self):
@@ -1191,11 +1181,28 @@ class Hauptfenster(QMainWindow):
             self.steckdosen_panel.heater_freigeben()
 
     def closeEvent(self, event):
-        self._zyklus.stoppen()
-        if self._grossanzeige is not None:
-            self._grossanzeige.close()
-        if self._kalib_fenster is not None:
-            self._kalib_fenster.close()
-        if self._historien_fenster is not None:
-            self._historien_fenster.close()
+        # Alarm-Einstellungen sichern
+        try:
+            self._alarm_einst.speichern()
+        except Exception as e:
+            print(f"[Shutdown] Alarm-Einstellungen nicht gespeichert: {e}")
+        # Messzyklus stoppen (gibt Hardware frei)
+        try:
+            self._zyklus.stoppen()
+        except Exception as e:
+            print(f"[Shutdown] Messzyklus-Fehler: {e}")
+        # Steckdosen-Poll-Timer stoppen
+        try:
+            if hasattr(self.steckdosen_panel, '_timer'):
+                self.steckdosen_panel._timer.stop()
+        except Exception:
+            pass
+        # Fenster schließen
+        for fenster in (self._grossanzeige, self._kalib_fenster,
+                        self._historien_fenster):
+            if fenster is not None:
+                try:
+                    fenster.close()
+                except Exception:
+                    pass
         event.accept()
