@@ -53,6 +53,54 @@ def _bereinige_druck(werte: list[Optional[float]]) -> np.ndarray:
     return arr
 
 
+def _zeitbasis_label() -> str:
+    """Gibt ein Label für die im PDF verwendete Zeitbasis zurück.
+
+    Die x-Achse zeigt Stunden seit lokaler Mitternacht, die CSV-Daten
+    nutzen ISO_lokal-Zeitstempel. Die Zeitzone wird aus dem System ermittelt.
+    """
+    try:
+        from datetime import timezone as _tz
+        jetzt = datetime.now()
+        utc_offset = jetzt.astimezone().utcoffset()
+        stunden = int(utc_offset.total_seconds() // 3600)
+        minuten = int((abs(utc_offset.total_seconds()) % 3600) // 60)
+        if minuten:
+            tz_str = f"UTC{stunden:+d}:{minuten:02d}"
+        else:
+            tz_str = f"UTC{stunden:+d}"
+    except Exception:
+        tz_str = "lokal"
+    return f"Zeitbasis: Lokalzeit ({tz_str})"
+
+
+def _druck_ylim(alle_pa_arrays: list[np.ndarray]) -> tuple[float, float]:
+    """Berechnet sinnvolle y-Achsen-Limits für log-skalierte Druckdaten.
+
+    Nimmt alle Druck-Arrays (Pa), findet den gültigen Bereich (>0, nicht
+    Overrange) und gibt (ymin, ymax) mit je einer halben Dekade Margin zurück.
+    Fallback: (1e-5, 1e-1) wenn keine gültigen Daten vorhanden.
+    """
+    FALLBACK = (1e-5, 1e-1)
+    gueltig = []
+    for arr in alle_pa_arrays:
+        if arr is None or len(arr) == 0:
+            continue
+        mask = (arr > 0) & (arr < OVERRANGE_PA) & np.isfinite(arr)
+        if mask.any():
+            gueltig.append(arr[mask])
+    if not gueltig:
+        return FALLBACK
+    zusammen = np.concatenate(gueltig)
+    if len(zusammen) == 0:
+        return FALLBACK
+    dmin, dmax = float(zusammen.min()), float(zusammen.max())
+    # Halbe Dekade Margin oben und unten
+    log_min = np.floor(np.log10(dmin)) - 0.5
+    log_max = np.ceil(np.log10(dmax)) + 0.5
+    return (10 ** log_min, 10 ** log_max)
+
+
 # ── Haupt-API ─────────────────────────────────────────────────────────────────
 
 def erstelle_tagesbericht(
@@ -117,13 +165,16 @@ def erstelle_tagesbericht(
         constrained_layout=True,
     )
     erstellt_um = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+    zb_label = _zeitbasis_label()
     fig.suptitle(
-        f"MJD: {mjd}    {datum.strftime('%Y-%m-%d')}    erstellt: {erstellt_um}",
+        f"MJD: {mjd}    {datum.strftime('%Y-%m-%d')}    erstellt: {erstellt_um}\n"
+        f"{zb_label}",
         fontsize=12, fontweight="bold"
     )
 
     # ── Druckplot ──
     zeiten_d = druck_daten.get("zeiten", [])
+    druck_arrays = []
     if zeiten_d:
         t_h_d = _stunden_achse(zeiten_d, tag_start)
         for kanal in DRUCK_KANAELE:
@@ -131,6 +182,7 @@ def erstelle_tagesbericht(
             if werte is None:
                 continue
             pa = _bereinige_druck(werte)
+            druck_arrays.append(pa)
             ax_p.scatter(
                 t_h_d, pa,
                 s=4,
@@ -141,7 +193,7 @@ def erstelle_tagesbericht(
             )
 
     ax_p.set_yscale("log")
-    ax_p.set_ylim(1e-5, 1e-1)
+    ax_p.set_ylim(*_druck_ylim(druck_arrays))
     ax_p.set_xlim(0, 24)
     ax_p.set_xlabel("$t$ / hour", fontsize=11)
     ax_p.set_ylabel("$p$ / Pa", fontsize=11)
