@@ -457,7 +457,8 @@ class SteckdosenPanel(QWidget):
                 status = self._steckdose.status_alle()
                 self._status_signal.emit(status)
             except Exception as e:
-                print(f"[Poll Fehler] {e}")
+                from log_utils import tprint
+                tprint("Steckdose Poll", str(e))
         threading.Thread(target=_run, daemon=True).start()
 
     def _status_anwenden(self, status: dict):

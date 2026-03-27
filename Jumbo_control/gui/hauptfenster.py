@@ -1185,12 +1185,13 @@ class Hauptfenster(QMainWindow):
         try:
             self._alarm_einst.speichern()
         except Exception as e:
-            print(f"[Shutdown] Alarm-Einstellungen nicht gespeichert: {e}")
+            from log_utils import tprint
+            tprint("Shutdown", f"Alarm-Einstellungen nicht gespeichert: {e}")
         # Messzyklus stoppen (gibt Hardware frei)
         try:
             self._zyklus.stoppen()
         except Exception as e:
-            print(f"[Shutdown] Messzyklus-Fehler: {e}")
+            tprint("Shutdown", f"Messzyklus-Fehler: {e}")
         # Steckdosen-Poll-Timer stoppen
         try:
             if hasattr(self.steckdosen_panel, '_timer'):

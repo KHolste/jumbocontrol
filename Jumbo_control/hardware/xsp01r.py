@@ -20,6 +20,7 @@ Kodierung: '@'=0000, 'A'=0001, 'B'=0010 ... 'O'=1111
 import serial
 import time
 from config import XSP01R_PORT, XSP01R_TIMEOUT
+from log_utils import tprint
 
 # Bit-Zuordnung
 BIT_KRYO1_SYSTEM = 0   # Relais 1
@@ -60,9 +61,9 @@ class XSP01R:
             self._ser.rts = True
             self._ser.dtr = True
             time.sleep(0.3)
-            print(f"[XSP01R] Verbunden auf {self._port}")
+            tprint("XSP01R", f"Verbunden auf {self._port}")
         except Exception as e:
-            print(f"[XSP01R] Verbindungsfehler: {e}")
+            tprint("XSP01R", f"Verbindungsfehler: {e}")
             self._ser = None
 
     def _befehl(self, cmd: bytes) -> bytes:
@@ -74,7 +75,7 @@ class XSP01R:
             time.sleep(0.15)
             return self._ser.read(self._ser.in_waiting or 16)
         except Exception as e:
-            print(f"[XSP01R] Kommunikationsfehler: {e}")
+            tprint("XSP01R", f"Kommunikationsfehler: {e}")
             return b""
 
     def _ausgaenge_lesen(self) -> int:
@@ -208,4 +209,4 @@ class XSP01R:
     def beenden(self):
         if self._ser and self._ser.is_open:
             self._ser.close()
-            print(f"[XSP01R] Verbindung geschlossen")
+            tprint("XSP01R", "Verbindung geschlossen")

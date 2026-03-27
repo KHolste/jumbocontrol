@@ -13,6 +13,7 @@ import os
 import traceback
 from datetime import datetime
 from config import LOG_PFAD
+from log_utils import tprint
 
 FEHLER_LOG_DATEI = os.path.join(LOG_PFAD, "fehler.log")
 
@@ -27,7 +28,7 @@ def _schreibe_fehler(typ, wert, tb):
         f.write(f"{'='*60}\n")
         traceback.print_exception(typ, wert, tb, file=f)
     # Auch auf Konsole ausgeben
-    print(f"\n[FEHLER] Unbehandelte Exception – Details in {FEHLER_LOG_DATEI}")
+    tprint("FEHLER", f"Unbehandelte Exception – Details in {FEHLER_LOG_DATEI}")
     traceback.print_exception(typ, wert, tb)
 
 
@@ -41,4 +42,4 @@ def installieren():
         _schreibe_fehler(args.exc_type, args.exc_value, args.exc_traceback)
     threading.excepthook = _thread_excepthook
 
-    print(f"[FehlerLog] Aktiv – Logdatei: {FEHLER_LOG_DATEI}")
+    tprint("FehlerLog", f"Aktiv – Logdatei: {FEHLER_LOG_DATEI}")

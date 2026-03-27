@@ -7,7 +7,8 @@
       "Bash(python -m pytest tests/test_csv_schreiber.py tests/test_csv_leser.py -q)",
       "Bash(python -m pytest tests/test_ablauf_logik.py -v)",
       "Bash(python -m pytest tests/ -v)",
-      "Bash(python -m pytest tests/test_themes.py -v)"
+      "Bash(python -m pytest tests/test_themes.py -v)",
+      "Bash(python -m pytest tests/test_log_utils.py -v)"
     ]
   }
 }

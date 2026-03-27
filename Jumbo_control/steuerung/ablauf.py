@@ -11,6 +11,7 @@ import traceback
 import math
 from daten import CsvSchreiber
 from config import TEMP_ALARM_MAX, TEMP_ALARM_MIN
+from log_utils import tprint
 
 RECONNECT_INTERVALL = 30   # Sekunden zwischen Reconnect-Versuchen
 
@@ -75,25 +76,25 @@ class Messzyklus:
 
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
-        print("[Messzyklus] Gestartet.")
+        tprint("Messzyklus", "Gestartet.")
 
     def stoppen(self):
         self._aktiv = False
         if self._thread:
             self._thread.join(timeout=30)
             if self._thread.is_alive():
-                print("[Messzyklus] Warnung: Thread-Shutdown Timeout nach 30s")
+                tprint("Messzyklus", "Warnung: Thread-Shutdown Timeout nach 30s")
         # Hardware einzeln freigeben – jeder Schritt unabhängig
         for label, geraet in [("cDAQ", self._temperatur), ("Druck", self._druck)]:
             if geraet is not None:
                 try:
                     geraet.beenden()
-                    print(f"[Messzyklus] {label} freigegeben")
+                    tprint("Messzyklus", f"{label} freigegeben")
                 except Exception as e:
-                    print(f"[Messzyklus] {label} Freigabe-Fehler: {e}")
+                    tprint("Messzyklus", f"{label} Freigabe-Fehler: {e}")
         self._temperatur = None
         self._druck = None
-        print("[Messzyklus] Gestoppt.")
+        tprint("Messzyklus", "Gestoppt.")
 
     # ── Verbindungsaufbau ─────────────────────────────────────
     def _verbinde_temperatur(self):
@@ -103,14 +104,14 @@ class Messzyklus:
             alt = self._hw_status.cdaq
             self._hw_status.cdaq = True
             if not alt:
-                print("[Messzyklus] cDAQ verbunden")
+                tprint("Messzyklus", "cDAQ verbunden")
                 self._melde_hw_status()
         except Exception as e:
             self._temperatur = None
             alt = self._hw_status.cdaq
             self._hw_status.cdaq = False
             if alt:
-                print(f"[Messzyklus] cDAQ nicht erreichbar: {e}")
+                tprint("Messzyklus", f"cDAQ nicht erreichbar: {e}")
                 self._melde_hw_status()
 
     def _verbinde_druck(self):
@@ -120,14 +121,14 @@ class Messzyklus:
             alt = self._hw_status.druck
             self._hw_status.druck = True
             if not alt:
-                print("[Messzyklus] DruckMessung verbunden")
+                tprint("Messzyklus", "DruckMessung verbunden")
                 self._melde_hw_status()
         except Exception as e:
             self._druck = None
             alt = self._hw_status.druck
             self._hw_status.druck = False
             if alt:
-                print(f"[Messzyklus] DruckMessung nicht erreichbar: {e}")
+                tprint("Messzyklus", f"DruckMessung nicht erreichbar: {e}")
                 self._melde_hw_status()
 
     def _melde_hw_status(self):
@@ -161,12 +162,12 @@ class Messzyklus:
                         except Exception as csv_e:
                             if time.time() - self._letzte_csv_warnung > 60:
                                 self._letzte_csv_warnung = time.time()
-                                print(f"[Messzyklus] Temperatur-CSV Fehler: {csv_e}")
+                                tprint("Messzyklus", f"Temperatur-CSV Fehler: {csv_e}")
                         self._pruefe_alarme(t_werte)
                         if self.bei_messung_temp:
                             self.bei_messung_temp(t_werte)
                     except Exception as e:
-                        print(f"[Messzyklus] Temperaturfehler: {e}")
+                        tprint("Messzyklus", f"Temperaturfehler: {e}")
                         self._temperatur = None
                         self._hw_status.cdaq = False
                         self._melde_hw_status()
@@ -181,11 +182,11 @@ class Messzyklus:
                         except Exception as csv_e:
                             if time.time() - self._letzte_csv_warnung > 60:
                                 self._letzte_csv_warnung = time.time()
-                                print(f"[Messzyklus] Druck-CSV Fehler: {csv_e}")
+                                tprint("Messzyklus", f"Druck-CSV Fehler: {csv_e}")
                         if self.bei_messung_druck:
                             self.bei_messung_druck(d_werte)
                     except Exception as e:
-                        print(f"[Messzyklus] Druckfehler: {e}")
+                        tprint("Messzyklus", f"Druckfehler: {e}")
                         try:
                             self._druck.beenden()
                         except Exception:
@@ -200,7 +201,7 @@ class Messzyklus:
                 time.sleep(wartezeit)
 
             except Exception as e:
-                print(f"[Messzyklus] Unerwarteter Fehler: {e}")
+                tprint("Messzyklus", f"Unerwarteter Fehler: {e}")
                 traceback.print_exc()
                 # In Fehlerlog schreiben
                 try:

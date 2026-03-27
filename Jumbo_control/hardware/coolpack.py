@@ -20,6 +20,7 @@ Verwendung:
 
 import serial
 import time
+from log_utils import tprint
 
 STX = b'\x02'
 CR  = b'\x0d'
@@ -80,7 +81,7 @@ class Coolpack:
             )
             time.sleep(0.3)
         except Exception as e:
-            print(f"[Coolpack {self.name}] Verbindungsfehler: {e}")
+            tprint(f"Coolpack {self.name}", f"Verbindungsfehler: {e}")
             self._ser = None
 
     def _sende(self, befehl: str) -> str:
@@ -99,7 +100,7 @@ class Coolpack:
                     break
             return rohdaten.decode("ascii", errors="replace").strip()
         except Exception as e:
-            print(f"[Coolpack {self.name}] Kommunikationsfehler: {e}")
+            tprint(f"Coolpack {self.name}", f"Kommunikationsfehler: {e}")
             return ""
 
     def status(self) -> dict:
@@ -214,7 +215,7 @@ class Coolpack:
             ergebnis["gueltig"] = True
 
         except Exception as e:
-            print(f"[Coolpack {self.name}] Parse-Fehler: {e}")
+            tprint(f"Coolpack {self.name}", f"Parse-Fehler: {e}")
 
         return ergebnis
 
@@ -222,14 +223,14 @@ class Coolpack:
         """Schaltet Kompressor EIN (SYS 1)."""
         r = self._sende("SYS1")
         an = "SYS1" in r
-        print(f"[Coolpack {self.name}] EIN → {r!r}")
+        tprint(f"Coolpack {self.name}", f"EIN → {r!r}")
         return an
 
     def ausschalten(self) -> bool:
         """Schaltet Kompressor AUS (SYS 0)."""
         r = self._sende("SYS0")
         aus = "SYS0" in r
-        print(f"[Coolpack {self.name}] AUS → {r!r}")
+        tprint(f"Coolpack {self.name}", f"AUS → {r!r}")
         return aus
 
     def fehler_abfragen(self) -> list:
@@ -255,7 +256,7 @@ class Coolpack:
                             "stunden":  stunden,
                         })
         except Exception as e:
-            print(f"[Coolpack {self.name}] ERR Parse-Fehler: {e}")
+            tprint(f"Coolpack {self.name}", f"ERR Parse-Fehler: {e}")
         return fehler
 
     def beenden(self):

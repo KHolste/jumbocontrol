@@ -19,6 +19,7 @@ Verwendung:
 import urllib.request
 import xml.etree.ElementTree as ET
 from config import STECKDOSE_IP, STECKDOSE_TIMEOUT
+from log_utils import tprint
 
 # ── Dosenzuordnung (Name → Aktornummer) ───────────────────────
 # Aktornummern entsprechen der Konfiguration in der ALL4076
@@ -44,6 +45,20 @@ def _get(url: str, timeout: float) -> str:
         return r.read().decode("utf-8")
 
 
+def _fehler_klasse(exc: Exception) -> str:
+    """Klassifiziert Netzwerkfehler für verständlichere Meldungen."""
+    text = str(exc)
+    if "10061" in text:
+        return "Verbindung verweigert (Gerät antwortet nicht auf Port)"
+    if "timed out" in text or "timeout" in text.lower():
+        return "Zeitüberschreitung (Netzwerk/Gerät reagiert nicht)"
+    if "10060" in text:
+        return "Verbindung Zeitüberschreitung (Netzwerk nicht erreichbar)"
+    if "10065" in text or "No route" in text:
+        return "Kein Netzwerkpfad (Gerät nicht erreichbar)"
+    return "Netzwerkfehler"
+
+
 class Steckdose:
     """
     Steuert die ALLNET ALL4076 IP-Steckdosenleiste über HTTP/XML.
@@ -61,6 +76,7 @@ class Steckdose:
 
     def __init__(self, ip=STECKDOSE_IP):
         self._basis = f"http://{ip}/xml"
+        self._online = True   # Zustandswechsel-Tracking
 
     def status_alle(self) -> dict:
         """
@@ -82,8 +98,13 @@ class Steckdose:
                         "status":  AKTOR_STATUS.get(state, f"unbekannt ({state})"),
                         "gueltig": state in ("0", "1"),
                     }
+            if not self._online:
+                tprint("Steckdose", "Verbindung wiederhergestellt")
+                self._online = True
         except Exception as e:
-            print(f"[Steckdose] Fehler status_alle: {e}")
+            if self._online:
+                tprint("Steckdose", f"Offline – {_fehler_klasse(e)}: {e}")
+                self._online = False
         return ergebnis
 
     def status(self, name: str) -> dict:
@@ -102,7 +123,7 @@ class Steckdose:
                 "gueltig": state in ("0", "1"),
             }
         except Exception as e:
-            print(f"[Steckdose] Fehler status {name}: {e}")
+            tprint("Steckdose", f"Fehler status {name}: {e}")
             return {"dose": nr, "an": None, "status": "Fehler", "gueltig": False}
 
     def einschalten(self, name: str) -> bool:
@@ -123,7 +144,7 @@ class Steckdose:
     def _schalten(self, name: str, an: bool) -> bool:
         nr = DOSEN.get(name)
         if nr is None:
-            print(f"[Steckdose] Unbekannte Dose: {name}")
+            tprint("Steckdose", f"Unbekannte Dose: {name}")
             return False
         wert = 1 if an else 0
         url  = f"{self._basis}?mode=actor&type=switch&id={nr}&action={wert}"
@@ -131,10 +152,10 @@ class Steckdose:
             body  = _get(url, STECKDOSE_TIMEOUT)
             # actor_setstate: 0=AUS, 1=EIN, 3=Nichts zu tun
             state = self._parse_setstate(body)
-            print(f"[Steckdose] {name} (Dose {nr}) → {'EIN' if an else 'AUS'}  (setstate={state})")
+            tprint("Steckdose", f"{name} (Dose {nr}) → {'EIN' if an else 'AUS'}  (setstate={state})")
             return True
         except Exception as e:
-            print(f"[Steckdose] Fehler beim Schalten von {name}: {e}")
+            tprint("Steckdose", f"Fehler beim Schalten von {name}: {_fehler_klasse(e)}: {e}")
             return False
 
     def _parse_alle(self, body: str) -> dict:
@@ -148,7 +169,7 @@ class Steckdose:
                 if aid is not None and state is not None:
                     zustaende[int(aid)] = state.strip()
         except ET.ParseError as e:
-            print(f"[Steckdose] XML-Fehler: {e}\nBody: {body[:200]}")
+            tprint("Steckdose", f"XML-Fehler: {e}\nBody: {body[:200]}")
         return zustaende
 
     def _parse_einzeln(self, body: str, nr: int) -> str:

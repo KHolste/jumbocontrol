@@ -310,7 +310,8 @@ class HistorienFenster(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, eintrag)
             self._datei_liste.addItem(item)
         except Exception as e:
-            print(f"[Historien] Fehler beim Laden {pfad}: {e}")
+            from log_utils import tprint
+            tprint("Historien", f"Fehler beim Laden {pfad}: {e}")
 
     def _datei_entfernen(self, item: QListWidgetItem):
         eintrag = item.data(Qt.ItemDataRole.UserRole)

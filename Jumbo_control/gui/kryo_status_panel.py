@@ -292,10 +292,11 @@ class KryoStatusPanel(QWidget):
                             status_liste.append(st_csv)
     
                     except Exception as e:
-                        print(f"[KryoStatusPanel] {name} XSP01R: {e}")
+                        from log_utils import tprint
+                        tprint("KryoStatusPanel", f"{name} XSP01R: {e}")
     
             except Exception as e:
-                print(f"[KryoStatusPanel] XSP01R allgemein: {e}")
+                tprint("KryoStatusPanel", f"XSP01R allgemein: {e}")
     
             # Kryo 3-8 über Coolpack
             for name, port in self._coolpack_ports.items():
@@ -312,7 +313,7 @@ class KryoStatusPanel(QWidget):
                         status_liste.append(st)
     
                 except Exception as e:
-                    print(f"[KryoStatusPanel] {name}: {e}")
+                    tprint("KryoStatusPanel", f"{name}: {e}")
     
                 finally:
                     if c is not None:
@@ -327,7 +328,7 @@ class KryoStatusPanel(QWidget):
                     from daten.kryo_csv import KryoCsvSchreiber
                     KryoCsvSchreiber().speichere(status_liste)
                 except Exception as e:
-                    print(f"[KryoStatusPanel] CSV: {e}")
+                    tprint("KryoStatusPanel", f"CSV: {e}")
     
             # GUI-nahes Update
             self._update_alle_ein_button()

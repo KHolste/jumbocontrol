@@ -113,7 +113,8 @@ class TemperaturMessung:
             # Immer mit Override – erzwingt frische Reservierung (schnelleres task.read())
             chassis.reserve_network_device(override_reservation=True)
         except nidaqmx.errors.DaqError as e:
-            print(f"[TemperaturMessung] Reservierung fehlgeschlagen: {e}")
+            from log_utils import tprint
+            tprint("TemperaturMessung", f"Reservierung fehlgeschlagen: {e}")
 
     def _task_starten(self):
         self._task = nidaqmx.Task()

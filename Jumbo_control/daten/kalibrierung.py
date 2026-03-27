@@ -131,10 +131,12 @@ class KalibrierManager:
             sensor = basis.split("_")[0].upper()
             try:
                 self._kurven[sensor] = Kalibrierung(sensor, datei)
-                print(f"[Kalibrierung] {sensor}: {datei} geladen "
-                      f"({len(self._kurven[sensor].punkte)} Punkte)")
+                from log_utils import tprint
+                tprint("Kalibrierung", f"{sensor}: {datei} geladen "
+                       f"({len(self._kurven[sensor].punkte)} Punkte)")
             except Exception as e:
-                print(f"[Kalibrierung] Fehler {datei}: {e}")
+                from log_utils import tprint
+                tprint("Kalibrierung", f"Fehler {datei}: {e}")
 
     def hat_kalibrierung(self, sensor: str) -> bool:
         return sensor in self._kurven
