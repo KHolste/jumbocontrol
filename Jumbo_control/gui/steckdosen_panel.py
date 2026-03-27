@@ -84,6 +84,7 @@ class SteckdosenPanel(QWidget):
         self._kryo_an_check   = None
         self._xsp01r_fenster  = None
         self._aktive_kryos    = list(ALLE_KRYOS)
+        self._schalten_aktiv  = False   # Guard gegen Race-Conditions
         self._build_ui()
         self._status_laden()
         self._status_signal.connect(self._status_anwenden)
@@ -215,6 +216,17 @@ class SteckdosenPanel(QWidget):
 
     # ── Normales Schalten ─────────────────────────────────────
     def _schalten(self, name: str, btn: QPushButton):
+        # Guard: verhindert doppelte/parallele Schaltbefehle
+        if self._schalten_aktiv:
+            btn.setChecked(not btn.isChecked())  # Zustand zurücksetzen
+            return
+        self._schalten_aktiv = True
+        try:
+            self._schalten_intern(name, btn)
+        finally:
+            self._schalten_aktiv = False
+
+    def _schalten_intern(self, name: str, btn: QPushButton):
         if name == "Heater" and btn.isChecked():
             if self._heater_gesperrt:
                 btn.setChecked(False)
@@ -462,7 +474,7 @@ class SteckdosenPanel(QWidget):
         threading.Thread(target=_run, daemon=True).start()
 
     def _status_anwenden(self, status: dict):
-        """Aktualisiert Buttons im GUI-Thread."""
+        """Aktualisiert Buttons im GUI-Thread (nur Anzeige, kein Schalten)."""
         geaendert = False
         for name, d in status.items():
             if name not in self._buttons or not d["gueltig"]:
@@ -473,15 +485,17 @@ class SteckdosenPanel(QWidget):
             btn = self._buttons[name]
             if btn.isChecked() != an:
                 btn.blockSignals(True)
-                btn.setChecked(an)
-                # Gesperrten Style nicht überschreiben
-                if name == "Heater" and self._heater_gesperrt:
-                    pass  # Style bleibt gesperrt
-                elif name == "Roots" and self._roots_gesperrt:
-                    pass
-                else:
-                    btn.setStyleSheet(self._style(an))
-                btn.blockSignals(False)
+                try:
+                    btn.setChecked(an)
+                    # Gesperrten Style nicht überschreiben
+                    if name == "Heater" and self._heater_gesperrt:
+                        pass  # Style bleibt gesperrt
+                    elif name == "Roots" and self._roots_gesperrt:
+                        pass
+                    else:
+                        btn.setStyleSheet(self._style(an))
+                finally:
+                    btn.blockSignals(False)
                 geaendert = True
                 if self.bei_aktion:
                     self.bei_aktion(
@@ -502,12 +516,18 @@ class SteckdosenPanel(QWidget):
                     self._kryo_panel_ref.kryos_freigeben()
 
     def _status_laden(self):
+        """Liest Hardware-Status und setzt Anzeige (kein Schaltbefehl)."""
         try:
             status = self._steckdose.status_alle()
             for name, d in status.items():
                 if name in self._buttons and d["gueltig"] and name != "V1":
                     an = d["an"]
-                    self._buttons[name].setChecked(an)
-                    self._buttons[name].setStyleSheet(self._style(an))
+                    btn = self._buttons[name]
+                    btn.blockSignals(True)
+                    try:
+                        btn.setChecked(an)
+                        btn.setStyleSheet(self._style(an))
+                    finally:
+                        btn.blockSignals(False)
         except Exception:
             pass
