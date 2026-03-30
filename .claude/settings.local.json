@@ -9,7 +9,9 @@
       "Bash(python -m pytest tests/ -v)",
       "Bash(python -m pytest tests/test_themes.py -v)",
       "Bash(python -m pytest tests/test_log_utils.py -v)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(find . -name *intervall* -o -name *timing* -o -name *interval*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

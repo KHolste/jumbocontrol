@@ -59,6 +59,10 @@ COOLPACK_PORTS = {
     "Kryo 8": "COM17",
 }
 COOLPACK_WARTUNGSINTERVALL_H = 10000
+
+# ── Messintervall ─────────────────────────────────────────────
+MESS_INTERVALL_MIN_S     = 2.0   # Untergrenze (Seriell + cDAQ Trägheit)
+MESS_INTERVALL_DEFAULT_S = 5.0   # Startwert
 # ── PT100-Kalibrierung (Temperatur) ──────────────────────────
 # Zuordnung: Sensorname → Kalibrierdatei im Ordner kalibrierung/
 # Nur eingetragene Sensoren nutzen die Tabelle; alle anderen → CVD-Formel.

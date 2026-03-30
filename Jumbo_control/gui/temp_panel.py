@@ -137,6 +137,7 @@ class TempPanel(QWidget):
 
         self._canvas.mpl_connect("motion_notify_event", self._on_hover)
         self._canvas.mpl_connect("axes_leave_event",    self._on_leave)
+        self._canvas.mpl_connect("figure_leave_event",  self._on_leave)
         layout.addWidget(self._build_checkboxen(), 0)
 
     def _build_checkboxen(self) -> QWidget:

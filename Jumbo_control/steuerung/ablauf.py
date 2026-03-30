@@ -9,8 +9,9 @@ import time
 import threading
 import traceback
 import math
+from collections import deque
 from daten import CsvSchreiber
-from config import TEMP_ALARM_MAX, TEMP_ALARM_MIN
+from config import TEMP_ALARM_MAX, TEMP_ALARM_MIN, MESS_INTERVALL_MIN_S
 from log_utils import tprint
 
 RECONNECT_INTERVALL = 30   # Sekunden zwischen Reconnect-Versuchen
@@ -63,6 +64,17 @@ class Messzyklus:
         self._csv                = None
         self._hw_status          = HardwareStatus()
         self._letzter_reconnect  = 0.0
+
+        # ── Adaptiver Modus ──────────────────────────────────
+        self.adaptiv_aktiv              = False
+        self.adaptiv_temp_schwelle_pct  = 1.0
+        self.adaptiv_druck_schwelle_pct = 5.0
+        self.adaptiv_vergleichs_n       = 1
+        self.adaptiv_max_stille_s       = 30.0   # hart begrenzt auf 60
+        self._adaptiv_temp_ref          = {}     # name → deque(float)
+        self._adaptiv_druck_ref         = {}     # name → deque(float)
+        self._adaptiv_letzte_temp_emit  = 0.0    # time.monotonic
+        self._adaptiv_letzte_druck_emit = 0.0
 
     def starten(self):
         if self._aktiv:
@@ -155,17 +167,16 @@ class Messzyklus:
                     try:
                         t_werte = self._temperatur.messen()
                         t_werte = self._pruefe_temp_spruenge(t_werte)
-                        # CSV-Fehler (z.B. Datei geöffnet) sollen Hardware-Status
-                        # nicht auf rot setzen – nur Messfehler tun das
-                        try:
-                            self._csv.speichere_temperaturen(t_werte)
-                        except Exception as csv_e:
-                            if time.time() - self._letzte_csv_warnung > 60:
-                                self._letzte_csv_warnung = time.time()
-                                tprint("Messzyklus", f"Temperatur-CSV Fehler: {csv_e}")
                         self._pruefe_alarme(t_werte)
-                        if self.bei_messung_temp:
-                            self.bei_messung_temp(t_werte)
+                        if self._soll_emittieren("temp", t_werte):
+                            try:
+                                self._csv.speichere_temperaturen(t_werte)
+                            except Exception as csv_e:
+                                if time.time() - self._letzte_csv_warnung > 60:
+                                    self._letzte_csv_warnung = time.time()
+                                    tprint("Messzyklus", f"Temperatur-CSV Fehler: {csv_e}")
+                            if self.bei_messung_temp:
+                                self.bei_messung_temp(t_werte)
                     except Exception as e:
                         tprint("Messzyklus", f"Temperaturfehler: {e}")
                         self._temperatur = None
@@ -177,14 +188,15 @@ class Messzyklus:
                     try:
                         d_werte = self._druck.messen()
                         d_werte = self._pruefe_druck_spruenge(d_werte)
-                        try:
-                            self._csv.speichere_druecke(d_werte)
-                        except Exception as csv_e:
-                            if time.time() - self._letzte_csv_warnung > 60:
-                                self._letzte_csv_warnung = time.time()
-                                tprint("Messzyklus", f"Druck-CSV Fehler: {csv_e}")
-                        if self.bei_messung_druck:
-                            self.bei_messung_druck(d_werte)
+                        if self._soll_emittieren("druck", d_werte):
+                            try:
+                                self._csv.speichere_druecke(d_werte)
+                            except Exception as csv_e:
+                                if time.time() - self._letzte_csv_warnung > 60:
+                                    self._letzte_csv_warnung = time.time()
+                                    tprint("Messzyklus", f"Druck-CSV Fehler: {csv_e}")
+                            if self.bei_messung_druck:
+                                self.bei_messung_druck(d_werte)
                     except Exception as e:
                         tprint("Messzyklus", f"Druckfehler: {e}")
                         try:
@@ -218,6 +230,76 @@ class Messzyklus:
                 except Exception:
                     pass
                 time.sleep(2)
+
+    # ── Adaptiver Modus ──────────────────────────────────────
+
+    def _soll_emittieren(self, typ: str, werte: dict) -> bool:
+        """Prüft ob Messwerte in CSV/Plot geschrieben werden sollen.
+
+        Im nicht-adaptiven Modus: immer True.
+        Im adaptiven Modus: True wenn %-Schwelle überschritten ODER
+        die maximale Stillezeit abgelaufen ist.
+        Aktualisiert Referenzwerte und Zeitstempel bei Emission.
+        """
+        if not self.adaptiv_aktiv:
+            return True
+
+        if typ == "temp":
+            ref       = self._adaptiv_temp_ref
+            letzte    = self._adaptiv_letzte_temp_emit
+            schwelle  = self.adaptiv_temp_schwelle_pct
+            wert_key  = "celsius"
+        else:
+            ref       = self._adaptiv_druck_ref
+            letzte    = self._adaptiv_letzte_druck_emit
+            schwelle  = self.adaptiv_druck_schwelle_pct
+            wert_key  = "mbar"
+
+        jetzt = time.monotonic()
+        max_stille = min(self.adaptiv_max_stille_s, 60.0)
+
+        # Stille-Timeout → erzwungener Punkt
+        if (jetzt - letzte) >= max_stille:
+            self._adaptiv_update_ref(typ, werte, jetzt, wert_key)
+            return True
+
+        # Änderungsprüfung: ein relevanter Sensor reicht
+        n = max(1, self.adaptiv_vergleichs_n)
+        for name, d in werte.items():
+            if not d.get("gueltig") or d.get(wert_key) is None:
+                continue
+            wert = d[wert_key]
+            if name not in ref or not ref[name]:
+                self._adaptiv_update_ref(typ, werte, jetzt, wert_key)
+                return True
+            vals = list(ref[name])[-n:]
+            mittel = sum(vals) / len(vals)
+            # Division-by-zero-sicher: bei Referenz nahe Null absolute Schwelle
+            if abs(mittel) < 1e-12:
+                if abs(wert) > 1e-12:
+                    self._adaptiv_update_ref(typ, werte, jetzt, wert_key)
+                    return True
+            elif abs(wert - mittel) / abs(mittel) * 100.0 > schwelle:
+                self._adaptiv_update_ref(typ, werte, jetzt, wert_key)
+                return True
+
+        return False
+
+    def _adaptiv_update_ref(self, typ: str, werte: dict,
+                            jetzt: float, wert_key: str):
+        """Aktualisiert Referenzwerte und Zeitstempel nach Emission."""
+        if typ == "temp":
+            self._adaptiv_letzte_temp_emit = jetzt
+            ref = self._adaptiv_temp_ref
+        else:
+            self._adaptiv_letzte_druck_emit = jetzt
+            ref = self._adaptiv_druck_ref
+        for name, d in werte.items():
+            if not d.get("gueltig") or d.get(wert_key) is None:
+                continue
+            if name not in ref:
+                ref[name] = deque(maxlen=20)
+            ref[name].append(d[wert_key])
 
     def _pruefe_temp_spruenge(self, werte: dict) -> dict:
         """Prüft Temperatursprünge, filtert Ausreißer heraus."""

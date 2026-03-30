@@ -10,7 +10,8 @@ from datetime import datetime, timezone, timedelta
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QFrame, QTextEdit, QPushButton, QSizePolicy, QSplitter,
-    QGroupBox, QDateTimeEdit, QTabWidget, QCheckBox, QStatusBar
+    QGroupBox, QDateTimeEdit, QTabWidget, QCheckBox, QStatusBar,
+    QDoubleSpinBox,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QSize
 from PyQt6.QtGui import QFont, QAction
@@ -23,6 +24,8 @@ from gui.kalibrierung_fenster  import KalibrierFenster
 from gui.historien_fenster      import HistorienFenster
 from gui.alarm_einstellungen   import AlarmEinstellungen, AlarmEinstellungenDialog
 from steuerung            import Messzyklus
+from config               import MESS_INTERVALL_MIN_S, MESS_INTERVALL_DEFAULT_S
+from gui.adaptiv_dialog   import AdaptivDialog
 from gui.pdf_report       import erstelle_tagesbericht
 
 
@@ -437,6 +440,51 @@ class Hauptfenster(QMainWindow):
         self._regen_timer = QTimer()
         self._regen_timer.timeout.connect(self._regen_tick)
         self._regen_phase = None  # "warte_start" | "warte_stop"
+
+        # ── Messintervall ───────────────────────────────────
+        intervall_box = QGroupBox("Messintervall")
+        iv_layout = QVBoxLayout(intervall_box)
+        iv_layout.setSpacing(4)
+
+        row_iv = QHBoxLayout()
+        lbl_iv = QLabel("Intervall (s):")
+        lbl_iv.setStyleSheet("font-size: 10px; color: #666;")
+        self._sp_intervall = QDoubleSpinBox()
+        self._sp_intervall.setRange(0.1, 300.0)
+        self._sp_intervall.setDecimals(1)
+        self._sp_intervall.setSingleStep(1.0)
+        self._sp_intervall.setValue(MESS_INTERVALL_DEFAULT_S)
+        self._sp_intervall.setToolTip(
+            f"Minimales Intervall: {MESS_INTERVALL_MIN_S:.1f}s (Hardware-Trägheit)")
+        self._sp_intervall.valueChanged.connect(self._intervall_geaendert)
+        row_iv.addWidget(lbl_iv)
+        row_iv.addWidget(self._sp_intervall)
+        iv_layout.addLayout(row_iv)
+
+        # Adaptiv-Button: Linksklick = Toggle, Rechtsklick = Config-Dialog
+        self._btn_adaptiv = QPushButton("Adaptiv")
+        self._btn_adaptiv.setCheckable(True)
+        self._btn_adaptiv.setChecked(False)
+        self._btn_adaptiv.setStyleSheet("""
+            QPushButton {
+                background: #1e293b; color: #94a3b8; border: 1.5px solid #334155;
+                border-radius: 5px; font-weight: 700; font-size: 11px; padding: 5px 10px;
+            }
+            QPushButton:hover { border-color: #6ea8f7; color: #e2e8f0; }
+            QPushButton:checked {
+                background: #f59e0b; color: #1e293b; border-color: #f59e0b;
+            }
+        """)
+        self._btn_adaptiv.setToolTip(
+            "Linksklick: Adaptiv ein/aus\nRechtsklick: Einstellungen")
+        self._btn_adaptiv.clicked.connect(self._adaptiv_toggle)
+        self._btn_adaptiv.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu)
+        self._btn_adaptiv.customContextMenuRequested.connect(
+            self._adaptiv_dialog_oeffnen)
+        iv_layout.addWidget(self._btn_adaptiv)
+
+        layout.addWidget(intervall_box)
 
         layout.addStretch()
         return widget
@@ -914,6 +962,49 @@ class Hauptfenster(QMainWindow):
 
         threading.Thread(target=_run, daemon=True).start()
 
+    # ── Messintervall + Adaptiv ─────────────────────────────
+
+    def _intervall_geaendert(self, wert: float):
+        """Reagiert auf Änderung des Messintervall-Spinbox."""
+        if wert < MESS_INTERVALL_MIN_S:
+            effektiv = MESS_INTERVALL_MIN_S
+            self._zyklus.intervall = effektiv
+            self.log(
+                f"Messintervall {wert:.1f}s zu gering (Hardware-Minimum "
+                f"{MESS_INTERVALL_MIN_S:.1f}s) – verwende {effektiv:.1f}s",
+                farbe=self._theme["log_warn"])
+        else:
+            self._zyklus.intervall = wert
+            self.log(f"Messintervall geändert: {wert:.1f}s")
+
+    def _adaptiv_toggle(self, aktiv: bool):
+        """Linksklick auf Adaptiv-Button – Modus ein/aus."""
+        self._zyklus.adaptiv_aktiv = aktiv
+        if aktiv:
+            self.log("Adaptiver Modus aktiviert", farbe=self._theme["log_ok"])
+        else:
+            self.log("Adaptiver Modus deaktiviert")
+
+    def _adaptiv_dialog_oeffnen(self, _pos=None):
+        """Rechtsklick auf Adaptiv-Button – Einstellungsdialog."""
+        dlg = AdaptivDialog(
+            self,
+            temp_schwelle_pct=self._zyklus.adaptiv_temp_schwelle_pct,
+            druck_schwelle_pct=self._zyklus.adaptiv_druck_schwelle_pct,
+            vergleichs_n=self._zyklus.adaptiv_vergleichs_n,
+            max_stille_s=self._zyklus.adaptiv_max_stille_s,
+        )
+        if dlg.exec():
+            erg = dlg.ergebnis()
+            self._zyklus.adaptiv_temp_schwelle_pct  = erg["temp_schwelle_pct"]
+            self._zyklus.adaptiv_druck_schwelle_pct = erg["druck_schwelle_pct"]
+            self._zyklus.adaptiv_vergleichs_n       = erg["vergleichs_n"]
+            self._zyklus.adaptiv_max_stille_s       = erg["max_stille_s"]
+            self.log(
+                f"Adaptiv-Einstellungen: Temp {erg['temp_schwelle_pct']:.1f}%, "
+                f"Druck {erg['druck_schwelle_pct']:.1f}%, "
+                f"N={erg['vergleichs_n']}, "
+                f"Stille max {erg['max_stille_s']:.0f}s")
 
     def _kryo_timer_style(self, aktiv: bool) -> str:
         if aktiv:

@@ -110,6 +110,7 @@ class DruckPanel(QWidget):
         # ── Maus-Events ───────────────────────────────────────
         self._canvas.mpl_connect("motion_notify_event", self._on_hover)
         self._canvas.mpl_connect("axes_leave_event",    self._on_leave)
+        self._canvas.mpl_connect("figure_leave_event",  self._on_leave)
 
         toolbar_row = QWidget()
         toolbar_row_layout = QHBoxLayout(toolbar_row)
