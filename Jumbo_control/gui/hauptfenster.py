@@ -904,7 +904,8 @@ class Hauptfenster(QMainWindow):
                             f"{'EIN' if an else 'AUS'}: {name}",
                             farbe=self._theme["log_ok"] if an else self._theme["log_warn"]
                         )
-                        time.sleep(2.0)
+                        from config import KRYO_EINSCHALT_DELAY_MS
+                        time.sleep(KRYO_EINSCHALT_DELAY_MS / 1000.0)
 
                     except Exception as e:
                         self.log(f"Fehler {name}: {e}", farbe=self._theme["log_err"])

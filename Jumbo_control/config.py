@@ -44,6 +44,9 @@ XSP01R_TIMEOUT = 0.5
 # Kryopumpen die standardmäßig über den Cryo-Button gesteuert werden
 KRYO_AUSWAHL_DEFAULT = ["Kryo 1", "Kryo 2"]
 
+# Zeitverzögerung zwischen dem Einschalten einzelner Kryopumpen (ms)
+KRYO_EINSCHALT_DELAY_MS = 5000
+
 # ── Coolpack 6000 Kompressoren ────────────────────────────────
 # Kryo 1+2 werden über XSP01R (COM6) Relais INE3 gesteuert
 # Kryo 3-8 sind direkte Coolpack-Verbindungen

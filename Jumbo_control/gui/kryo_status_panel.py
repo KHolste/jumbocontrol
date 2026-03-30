@@ -373,7 +373,8 @@ class KryoStatusPanel(QWidget):
                 if self.bei_aktion:
                     self.bei_aktion(f"{name} Fehler: {e}")
     
-            delay_ms = 2000
+            from config import KRYO_EINSCHALT_DELAY_MS
+            delay_ms = KRYO_EINSCHALT_DELAY_MS
             QTimer.singleShot(delay_ms, lambda: _schalte_index(i + 1))
     
         _schalte_index(0)    
