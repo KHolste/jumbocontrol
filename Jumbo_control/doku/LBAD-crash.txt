@@ -5,6 +5,15 @@ Datum:    09.07.2026
 Datei:    crash.log (Absturzprotokoll)
 Status:   Ursache identifiziert und behoben
 
+Dieser Bericht behandelt zwei getrennte Themen:
+   TEIL A - Native Abstuerze (crash.log), Abschnitte 1-6
+   TEIL B - Abgeschnittene Kryo-Historie im Plot, Abschnitte 7-10
+
+
+======================================================================
+TEIL A - NATIVE ABSTUERZE (crash.log)
+======================================================================
+
 
 1. SYMPTOME
 ----------------------------------------------------------------------
@@ -97,4 +106,79 @@ Grundregel bei dieser Software: Jeder Zugriff auf GUI-Elemente (Buttons,
 Labels, Styles, Plots) MUSS aus dem Hauptthread erfolgen. Aus einem
 Hintergrund-Thread niemals direkt ein Widget anfassen, sondern immer
 per pyqtSignal an den Hauptthread uebergeben.
+
+
+======================================================================
+TEIL B - ABGESCHNITTENE KRYO-HISTORIE IM PLOT
+======================================================================
+Kein Absturz, sondern ein Darstellungs-/Datenfehler, der im gleichen
+Zug analysiert und behoben wurde.
+
+
+7. SYMPTOM
+----------------------------------------------------------------------
+Im Betrieb fiel auf, dass im Temperatur-/Kryo-Plot aeltere Werte
+verschwinden: die Kurven beginnen abrupt mitten im Diagramm, der linke
+(aeltere) Teil fehlt. Bei den Druckwerten schien das nicht zu passieren.
+
+
+8. URSACHE
+----------------------------------------------------------------------
+Die Plot-Historie liegt in einem Ringpuffer fester Groesse:
+
+   deque(maxlen = 10800)
+
+Beim real gemessenen Takt von 5 Sekunden fasst dieser Puffer nur
+
+   10800 x 5 s = 54000 s = 15 Stunden.
+
+Alles Aeltere faellt automatisch hinten heraus ("abgeschnitten").
+
+Wichtig: Das betrifft Temperatur UND Druck voellig gleich - beide
+nutzen denselben Puffer und denselben 5-Sekunden-Takt (in den Tages-
+Logdateien bestaetigt: beide 10387 Zeilen). Warum faellt es nur bei
+den Kryos auf?
+
+   - Die Kryo-Temperaturkurven sind DYNAMISCH (z.B. Aufwaermen von
+     -150 auf +20 Grad C). Wird die alte Phase abgeschnitten, sieht
+     man den abrupten Kurvenbeginn sofort.
+   - Die Druckkurve ist ueber Stunden nahezu FLACH (konstanter Wert).
+     Dort ist der Schnitt optisch unsichtbar, obwohl er genauso
+     passiert.
+
+Nebenbefund: Auch der Tages-PDF-Report verliert dadurch nach 15 h
+Laufzeit die fruehen Tagesstunden, da er die Daten ab Mitternacht aus
+demselben Puffer liest.
+
+
+9. BEHEBUNG
+----------------------------------------------------------------------
+Der Ringpuffer wird so vergroessert, dass beim Standard-Messintervall
+(5 s) mindestens ein voller Tag plus Reserve erhalten bleibt:
+
+   HISTORY_MAX  10800  ->  21600      (21600 x 5 s = 30 Stunden)
+
+Geaendert in drei aktiven Dateien (konsistent, damit auch Druck- und
+Kalibrier-Plot einen vollen Tag behalten):
+
+   gui/temp_panel.py
+   gui/druck_panel.py
+   gui/kalibrierung_fenster.py
+
+Die Backup-Kopien unter gui/sicherung/ wurden bewusst nicht angefasst
+(werden nicht ausgefuehrt).
+
+
+10. STATUS UND HINWEISE
+----------------------------------------------------------------------
+- Aenderung umgesetzt, syntaktisch geprueft (py_compile OK) und nach
+  GitHub gesichert (Branch main).
+- Wirkt ab dem naechsten Programmstart. Bereits verworfene alte Werte
+  sind weg; ab Neustart laeuft die Historie durchgehend ueber den Tag.
+- Aufwand fuer Speicher/Zeichnen steigt etwa auf das Doppelte - auf
+  diesem PC unkritisch. Falls der Live-Plot traege wirkt, Wert wieder
+  etwas senken oder das Zeitfenster "Letzten X Minuten" nutzen.
+- Bei kleinerem Messintervall (Minimum 2 s) reicht der Puffer fuer
+  ca. 12 h statt 30 h. Fuer den reaelen 5-s-Betrieb ist der volle Tag
+  abgedeckt.
 ======================================================================
