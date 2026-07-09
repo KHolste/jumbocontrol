@@ -35,7 +35,10 @@ FARBEN_DEFAULT = {
     "BA_roh":      "#06d6a0",
     "BA_kal":      "#2a9d8f",
 }
-HISTORY_MAX = 10800
+# Historie im Speicher. So dimensioniert, dass beim Standard-Messintervall (5 s)
+# mindestens ein voller Tag + Reserve erhalten bleibt: 21600 × 5 s = 30 h.
+# (Zuvor 10800 = nur 15 h.)
+HISTORY_MAX = 21600
 
 
 class KalibrierFenster(QWidget):

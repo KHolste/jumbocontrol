@@ -20,7 +20,11 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavToolbar
 from matplotlib.figure import Figure
 
-HISTORY_MAX = 10800
+# Plot-/PDF-Historie im Speicher. So dimensioniert, dass beim Standard-
+# Messintervall (5 s) mindestens ein voller Tag + Reserve erhalten bleibt und
+# ältere Werte nicht abgeschnitten werden: 21600 × 5 s = 30 h.
+# (Zuvor 10800 = nur 15 h → ältere Kurvenanfänge fielen aus dem Puffer.)
+HISTORY_MAX = 21600
 
 SENSOREN = [
     "Kryo 1 In", "Kryo 1", "Kryo 1b",
