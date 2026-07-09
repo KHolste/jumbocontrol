@@ -157,6 +157,7 @@ class KryoStatusPanel(QWidget):
     # Thread-sichere Signale zum Setzen der Buttons
     kryo_ein_signal = pyqtSignal(str)   # name des Kryos
     kryo_aus_signal = pyqtSignal(str)   # name des Kryos
+    alle_ein_update_signal = pyqtSignal()   # "Alle EIN"-Button aktualisieren
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -170,6 +171,7 @@ class KryoStatusPanel(QWidget):
         self._laden()
         self.kryo_ein_signal.connect(self._set_kryo_ein)
         self.kryo_aus_signal.connect(self._set_kryo_aus)
+        self.alle_ein_update_signal.connect(self._update_alle_ein_button)
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._aktualisieren)
@@ -330,8 +332,8 @@ class KryoStatusPanel(QWidget):
                 except Exception as e:
                     tprint("KryoStatusPanel", f"CSV: {e}")
     
-            # GUI-nahes Update
-            self._update_alle_ein_button()
+            # GUI-nahes Update – thread-sicher via Signal auf den GUI-Thread
+            self.alle_ein_update_signal.emit()
     
         threading.Thread(target=_run, daemon=True).start()
     
@@ -352,32 +354,69 @@ class KryoStatusPanel(QWidget):
                 return
     
         namen = list(self._zeilen.keys())
-    
+
+        def _verify_pass():
+            """Startet den Verify-Pass im Hintergrundthread (Soll vs. Ist)."""
+            eintraege = []
+            for name in namen:
+                z = self._zeilen.get(name)
+                if z is None:
+                    continue
+                if z._ist_xsp:
+                    eintraege.append({
+                        "name": name, "ist_xsp": True,
+                        "kryo_nr": z._kryo_nr, "soll_an": an,
+                    })
+                else:
+                    port = self._coolpack_ports.get(name)
+                    if not port:
+                        continue
+                    eintraege.append({
+                        "name": name, "ist_xsp": False,
+                        "port": port, "soll_an": an,
+                    })
+
+            def _run():
+                try:
+                    from hardware.kryo_verify import pruefe_und_korrigiere
+                    pruefe_und_korrigiere(
+                        eintraege, settle_sec=3.0, max_retries=1,
+                        log=self.bei_aktion,
+                    )
+                except Exception as e:
+                    if self.bei_aktion:
+                        self.bei_aktion(f"⚠ Kryo-Verify Fehler: {e}")
+                # Anzeige nach Korrekturen aktualisieren
+                self._aktualisieren()
+
+            threading.Thread(target=_run, daemon=True).start()
+
         def _schalte_index(i: int):
             if i >= len(namen):
                 if self.bei_aktion:
                     self.bei_aktion(f"Alle Kryos → {'EIN' if an else 'AUS'}")
+                _verify_pass()
                 return
-    
+
             name = namen[i]
             zeile = self._zeilen[name]
-    
+
             try:
                 zeile._btn.blockSignals(True)
                 zeile._btn.setChecked(an)
                 zeile._btn.blockSignals(False)
-    
+
                 zeile._schalten(an)
-    
+
             except Exception as e:
                 if self.bei_aktion:
                     self.bei_aktion(f"{name} Fehler: {e}")
-    
+
             from config import KRYO_EINSCHALT_DELAY_MS
             delay_ms = KRYO_EINSCHALT_DELAY_MS
             QTimer.singleShot(delay_ms, lambda: _schalte_index(i + 1))
-    
-        _schalte_index(0)    
+
+        _schalte_index(0)
 
 
     def _update_alle_ein_button(self):

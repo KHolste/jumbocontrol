@@ -1,0 +1,36 @@
+# Kalibrierdaten Druckmessröhre,
+# Sensor:      BA,
+# Zertifikat:  17778,
+# Datum:       2025-10,
+# Quelle:      Kalibrierung am UHV Messstand,
+# Methode:     log-lineare Interpolation,
+# Einheit:     mbar,
+# Spalten:     Messwert_mbar (MaxiGauge), Wahrer_Wert_mbar (Kalibriergerät KG)
+#,
+Messwert_mbar,Wahrer_Wert_mbar
+3.60E-7,7.18E-8
+1.64E-6,1.042E-6
+2.15E-6,1.468E-6
+2.82E-6,2.074E-6
+3.96E-6,3.066E-6
+6.23E-6,5.035E-6
+8.56E-6,7.072E-6
+1.24E-5,1.058E-5
+1.76E-5,1.505E-5
+2.36E-5,2.040E-5
+3.31E-5,3.024E-5
+5.45E-5,4.940E-5
+7.5E-5,6.937E-5
+1.11E-4,1.023E-4
+1.62E-4,1.495E-4
+2.23E-4,2.039E-4
+3.17E-4,2.945E-4
+5.35E-4,4.929E-4
+7.61E-4,6.950E-4
+1.12E-3,1.017E-3
+1.64E-3,1.509E-3
+2.1E-3,2.016E-3
+3.16E-3,3.054E-3
+5.14E-3,5.055E-3
+6.98E-3,7.097E-3
+9.00E-3,1.016E-2

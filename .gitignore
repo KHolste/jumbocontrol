@@ -1,0 +1,28 @@
+# ==========================================================================
+# .gitignore für Jumbo_control
+# Nur echter Quellcode + Konfiguration + Kalibrierdaten gehören ins git.
+# Im Betrieb neu entstehende Dateien (Logs, Reports, Caches) werden ignoriert.
+# ==========================================================================
+
+# --- Python Build-Artefakte ---
+__pycache__/
+*.py[cod]
+*.pyo
+
+# --- Laufzeit-Logs (entstehen im Betrieb täglich neu) ---
+Jumbo_control/daten/logs/
+*.log
+
+# --- Generierte PDF-Reports ---
+Jumbo_control/pdf/
+
+# --- Sonstige Laufzeit-/Diagnose-Ausgaben ---
+system_metrics_*.csv
+temperature_alert.log
+
+# --- Office-Sperr-/Temporärdateien (entstehen beim Öffnen von Dokumenten) ---
+.~lock.*#
+~$*
+
+# HINWEIS: Kalibrierdaten (Jumbo_control/kalibrierung/) werden bewusst
+# NICHT ignoriert – sie gehören zur versionierten Konfiguration.

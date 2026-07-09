@@ -21,7 +21,7 @@ from config import MAXIGAUGE_PORT
 # ── Konfiguration ──────────────────────────────────────────────
 BAUDRATE   = 9600
 TIMEOUT    = 0.2
-ALLE_KANAELE = [1, 2, 4]   # Belegte Kanäle: DOOR, CENTER, BA
+ALLE_KANAELE = [1, 2, 4]   # Belegte Kanäle: CENTER, DOOR, BA
 
 # Sensor-Statuscodes laut Pfeiffer-Protokoll
 SENSOR_STATUS = {
@@ -45,8 +45,8 @@ EINHEITEN = {
 }
 
 KANAL_NAMEN = {
-    1: "DOOR",
-    2: "CENTER",
+    1: "CENTER",
+    2: "DOOR",
     4: "BA",
 }
 
@@ -147,8 +147,8 @@ class DruckMessung:
 
         Rückgabe: dict mit Kanalnummer als Schlüssel, z.B.:
         {
-            1: {"name": "DOOR",   "mbar": 9.95e+0, "einheit": "mbar", "status": "OK", "gueltig": True},
-            2: {"name": "CENTER", "mbar": 9.48e+0, "einheit": "mbar", "status": "OK", "gueltig": True},
+            1: {"name": "CENTER", "mbar": 9.95e+0, "einheit": "mbar", "status": "OK", "gueltig": True},
+            2: {"name": "DOOR",   "mbar": 9.48e+0, "einheit": "mbar", "status": "OK", "gueltig": True},
             4: {"name": "BA",     "mbar": None,    "einheit": "mbar", "status": "Überdruck", "gueltig": False},
         }
         """

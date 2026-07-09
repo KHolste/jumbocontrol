@@ -2,11 +2,12 @@
 gui/steckdosen_panel.py
 Buttons für die IP-Steckdosenleiste.
 
-Sicherheitsfeature V1:
-    V1 ist gesperrt wenn mindestens ein gültiger Drucksensor < 1 mbar anzeigt.
-    Overrange gilt als >= 1 mbar (Druck zu hoch = kein Vakuum = sicher).
-    Wenn alle Sensoren ausgefallen sind (kein Signal) → gesperrt.
-    Wenn alle Sensoren Overrange → freigegeben.
+Sicherheitsfeature V1 (Einschaltsperre, asymmetrisch):
+    Einschalten ist gesperrt, sobald mindestens ein gültiger Drucksensor < 1 mbar
+    anzeigt oder der Druckstatus unbekannt ist (alle Sensoren ausgefallen).
+    Overrange gilt als >= 1 mbar (Druck zu hoch = kein Vakuum = Einschalten zulässig).
+    Ausschalten ist immer erlaubt – auch unterhalb von 1 mbar – damit ein bereits
+    offenes V1 jederzeit risikofrei geschlossen werden kann.
 """
 
 import threading
@@ -184,17 +185,16 @@ class SteckdosenPanel(QWidget):
             return
         war_frei = self._v1_gesperrt is False
         self._v1_gesperrt = True
-        btn.setEnabled(False)
-        btn.setToolTip(f"⚠ V1 gesperrt:\n{grund}")
-        btn.setStyleSheet("""
-            QPushButton {
-                background: #e2e8f0; border: 2px solid #cbd5e1;
-                border-radius: 6px; color: #94a3b8;
-                font-size: 13px; font-weight: 700; padding: 7px 18px;
-            }
-        """)
+        # Button bleibt klickbar – Einschalten wird in _schalten_intern abgefangen,
+        # Ausschalten ist auch unterhalb 1 mbar jederzeit erlaubt.
+        btn.setEnabled(True)
+        btn.setToolTip(
+            f"⚠ V1 Einschaltsperre aktiv:\n{grund}\n"
+            f"(Ausschalten bleibt jederzeit möglich)"
+        )
+        self._v1_style_anwenden()
         if war_frei and self.bei_aktion:
-            self.bei_aktion(f"⚠ V1 gesperrt: {grund}")
+            self.bei_aktion(f"⚠ V1 Einschaltsperre: {grund}")
 
     def _v1_freigeben(self):
         btn = self._buttons.get("V1")
@@ -204,8 +204,7 @@ class SteckdosenPanel(QWidget):
         self._v1_gesperrt = False
         btn.setEnabled(True)
         btn.setToolTip("")
-        an = btn.isChecked()
-        btn.setStyleSheet(self._style(an))
+        self._v1_style_anwenden()
         if war_gesperrt and self.bei_aktion:
             sensoren = ", ".join(
                 f"{n}: {d['mbar']:.2E} mbar"
@@ -213,6 +212,35 @@ class SteckdosenPanel(QWidget):
                 if d.get("gueltig") and d.get("mbar") is not None
             )
             self.bei_aktion(f"V1 freigegeben ({sensoren})")
+
+    def _v1_style_anwenden(self):
+        """Setzt den V1-Button-Style passend zu Sperre und Schaltzustand."""
+        btn = self._buttons.get("V1")
+        if not btn:
+            return
+        an = btn.isChecked()
+        if not self._v1_gesperrt:
+            btn.setStyleSheet(self._style(an))
+            return
+        if an:
+            # V1 offen, Druck zu niedrig → Warn-Look, AUS-Klick führt sicher zu.
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: #f59e0b; border: 2px solid #b45309;
+                    border-radius: 6px; color: #ffffff;
+                    font-size: 13px; font-weight: 700; padding: 7px 18px;
+                }
+                QPushButton:hover { background: #d97706; }
+            """)
+        else:
+            # V1 zu, Einschalten gesperrt.
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: #e2e8f0; border: 2px dashed #f59e0b;
+                    border-radius: 6px; color: #64748b;
+                    font-size: 13px; font-weight: 700; padding: 7px 18px;
+                }
+            """)
 
     # ── Normales Schalten ─────────────────────────────────────
     def _schalten(self, name: str, btn: QPushButton):
@@ -243,15 +271,17 @@ class SteckdosenPanel(QWidget):
             if self.bei_aktion:
                 self.bei_aktion("⛔ Roots blockiert – Druck zu hoch!")
             return
-        if name == "V1" and self._v1_gesperrt:
+        # V1: Asymmetrische Sperre – Einschalten blockiert, Ausschalten immer erlaubt.
+        if name == "V1" and self._v1_gesperrt and btn.isChecked():
             btn.setChecked(False)
+            self._v1_style_anwenden()
             if self.bei_aktion:
-                self.bei_aktion("⛔ V1 Schaltversuch blockiert – Druck zu niedrig!")
+                self.bei_aktion("⛔ V1 Einschalten blockiert – Druck < 1 mbar!")
             return
 
         an = btn.isChecked()
 
-        # Bestätigungsdialog für V1
+        # Bestätigungsdialog für V1 (nur beim Einschalten)
         if name == "V1" and an:
             antwort = QMessageBox.question(
                 self, "V1 einschalten",
@@ -260,13 +290,18 @@ class SteckdosenPanel(QWidget):
             )
             if antwort != QMessageBox.StandardButton.Yes:
                 btn.setChecked(False)
+                self._v1_style_anwenden()
                 return
 
         if an:
             self._steckdose.einschalten(name)
         else:
             self._steckdose.ausschalten(name)
-        btn.setStyleSheet(self._style(an))
+        if name == "V1":
+            # Sperre-Style nach AUS unter 1 mbar wieder herstellen.
+            self._v1_style_anwenden()
+        else:
+            btn.setStyleSheet(self._style(an))
         self._log(f"{name} → {'EIN' if an else 'AUS'}")
 
     def _style(self, an: bool) -> str:
@@ -303,6 +338,8 @@ class SteckdosenPanel(QWidget):
         def _run():
             erfolg = []
             fehler = []
+            verify_eintraege = []   # für Verify-Pass nach dem Bulk-Switch
+
             # Kryo 1+2 → XSP01R
             xsp_kryos = [k for k in self._aktive_kryos if k in KRYO_XSP]
             if xsp_kryos:
@@ -310,12 +347,14 @@ class SteckdosenPanel(QWidget):
                     from hardware.geraete import get_xsp01r
                     x = get_xsp01r()
                     for k in xsp_kryos:
-                        if k == "Kryo 1":
-                            if an: x.kryo1_einschalten()
-                            else:  x.kryo1_ausschalten()
-                        elif k == "Kryo 2":
-                            if an: x.kryo2_einschalten()
-                            else:  x.kryo2_ausschalten()
+                        nr = 1 if k == "Kryo 1" else 2
+                        if an:
+                            x.kryo1_einschalten() if nr == 1 else x.kryo2_einschalten()
+                        else:
+                            x.kryo1_ausschalten() if nr == 1 else x.kryo2_ausschalten()
+                        verify_eintraege.append({
+                            "name": k, "ist_xsp": True, "kryo_nr": nr, "soll_an": an
+                        })
                     erfolg += xsp_kryos
                 except Exception as e:
                     fehler += [f"{k}: {e}" for k in xsp_kryos]
@@ -339,6 +378,10 @@ class SteckdosenPanel(QWidget):
                                 c.ausschalten()
                             c.beenden()
                             erfolg.append(name)
+                            verify_eintraege.append({
+                                "name": name, "ist_xsp": False,
+                                "port": port, "soll_an": an,
+                            })
                         except Exception as e:
                             fehler.append(f"{name}: {e}")
                 except ImportError as e:
@@ -349,6 +392,20 @@ class SteckdosenPanel(QWidget):
                 msg += f"  ⚠ {', '.join(fehler)}"
             if self.bei_aktion:
                 self.bei_aktion(msg)
+
+            # Verify-Pass: prüfen, ob alle Kryos im Soll-Zustand sind,
+            # und bei Bedarf nachschalten. Läuft im selben Hintergrund-Thread,
+            # damit Coolpack-Ports seriell genutzt werden.
+            if verify_eintraege:
+                try:
+                    from hardware.kryo_verify import pruefe_und_korrigiere
+                    pruefe_und_korrigiere(
+                        verify_eintraege, settle_sec=3.0, max_retries=1,
+                        log=self.bei_aktion,
+                    )
+                except Exception as e:
+                    if self.bei_aktion:
+                        self.bei_aktion(f"⚠ Kryo-Verify Fehler: {e}")
 
         threading.Thread(target=_run, daemon=True).start()
 

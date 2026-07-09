@@ -198,9 +198,9 @@ class TcpMessServer:
 
         # Druckkanäle – Dashboard erwartet "P Door", "P Center", "P BA"
         druck_map = [
-            ("DOOR", "P Door"),
-            ("CENT", "P Center"),
-            ("BA",   "P BA"),
+            ("DOOR",   "P Door"),
+            ("CENTER", "P Center"),
+            ("BA",     "P BA"),
         ]
         for csv_key, dash_name in druck_map:
             d = druck.get(csv_key)

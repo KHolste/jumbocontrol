@@ -27,6 +27,7 @@ from steuerung            import Messzyklus
 from config               import MESS_INTERVALL_MIN_S, MESS_INTERVALL_DEFAULT_S
 from gui.adaptiv_dialog   import AdaptivDialog
 from gui.pdf_report       import erstelle_tagesbericht
+from gui.tcp_server       import TcpMessServer
 
 
 class SignalBridge(QObject):
@@ -73,11 +74,13 @@ class Hauptfenster(QMainWindow):
         self._historien_fenster = None
         self._hw_leds = {}   # keine LEDs im Header mehr, nur Statusleiste
         self._alarm_einst    = AlarmEinstellungen()
+        self._tcp_server     = TcpMessServer(port=5001)
         self._build_ui()
         self._build_menubar()
         self._build_statusbar()
         self._verbinde_signale()
         self._zyklus_starten()
+        self._tcp_server.start()
         self._apply_theme(self._theme, still=True)
         self._uhr_timer = QTimer()
         self._uhr_timer.timeout.connect(self._update_uhr)
@@ -552,6 +555,8 @@ class Hauptfenster(QMainWindow):
         self._bridge.hw_status.connect(self._update_hw_status)
         self._bridge.log_msg.connect(self.log)
         self._bridge.sprung_alarm.connect(self._zeige_sprung_alarm)
+        self._bridge.neue_druecke.connect(self._tcp_server.update_druck)
+        self._bridge.neue_temperaturen.connect(self._tcp_server.update_temp)
         self.druck_panel.kalib_geoeffnet.connect(self._kalib_fenster_oeffnen)
         self.druck_panel.grossanzeige_anfordern.connect(self._grossanzeige_oeffnen)
 
@@ -1284,6 +1289,11 @@ class Hauptfenster(QMainWindow):
             self._zyklus.stoppen()
         except Exception as e:
             tprint("Shutdown", f"Messzyklus-Fehler: {e}")
+        # TCP-Messserver stoppen
+        try:
+            self._tcp_server.stop()
+        except Exception:
+            pass
         # Steckdosen-Poll-Timer stoppen
         try:
             if hasattr(self.steckdosen_panel, '_timer'):

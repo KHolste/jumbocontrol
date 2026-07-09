@@ -197,10 +197,14 @@ class TcpMessServer:
         eintraege = []
 
         # Druckkanäle – Dashboard erwartet "P Door", "P Center", "P BA"
+        # Hardware-Keys aus DruckMessung.messen(): "DOOR", "CENTER", "BA".
+        # Früher stand hier "CENT" → druck.get("CENT") = None → "P Center,NaN"
+        # über die Leitung → Datengrabber zeigte OVERRANGE. Siehe auch das
+        # gleiche, bereits gefixte Problem in daten/csv_schreiber.py.
         druck_map = [
-            ("DOOR", "P Door"),
-            ("CENT", "P Center"),
-            ("BA",   "P BA"),
+            ("DOOR",   "P Door"),
+            ("CENTER", "P Center"),
+            ("BA",     "P BA"),
         ]
         for csv_key, dash_name in druck_map:
             d = druck.get(csv_key)
