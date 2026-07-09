@@ -1,0 +1,100 @@
+======================================================================
+BERICHT: Programmabstuerze Jumbo Control - Analyse und Behebung
+======================================================================
+Datum:    09.07.2026
+Datei:    crash.log (Absturzprotokoll)
+Status:   Ursache identifiziert und behoben
+
+
+1. SYMPTOME
+----------------------------------------------------------------------
+Das Programm ist im Betrieb mehrfach hart abgestuerzt (native Windows
+Fatal Exceptions, kein normaler Python-Fehler). Im crash.log traten
+ueber einen laengeren Zeitraum (mehrere Python-Versionen) drei
+verschiedene Fehlerarten auf:
+
+   0xc0000374        Heap Corruption   (Speicher zerstoert)
+   0xc0000420        Assertion Failure (interne Qt-Pruefung schlaegt an)
+   access violation  Segfault          (ungueltiger Speicherzugriff)
+
+Drei unterschiedliche Symptome - eine gemeinsame Ursache. Dieses
+Muster ist typisch fuer einen Thread-Fehler in der GUI-Bibliothek.
+
+
+2. GEMEINSAMER NENNER
+----------------------------------------------------------------------
+In jedem Absturz zeigte der aktive Thread auf dieselbe Stelle:
+
+   gui/kryo_status_panel.py  ->  _update_alle_ein_button
+   gui/kryo_status_panel.py  ->  _run
+   threading.py              ->  run   (ein HINTERGRUND-Thread)
+
+Die ebenfalls sichtbaren Threads mit nidaqmx / read_analog_f64
+(temperatur.py) waren nur andere laufende Threads, nicht die Ursache.
+
+
+3. URSACHE
+----------------------------------------------------------------------
+Die Methode _aktualisieren() im Kryo-Status-Panel laeuft in einem
+Hintergrund-Thread (daemon). An dessen Ende wurde direkt
+
+   self._update_alle_ein_button()
+
+aufgerufen. Diese Methode greift DIREKT auf Qt-Widgets zu:
+
+   - liest   z._btn.isChecked()
+   - schreibt self._btn_alle_ein.setStyleSheet(...)
+
+PyQt6 erlaubt Zugriffe auf GUI-Widgets AUSSCHLIESSLICH aus dem
+Haupt-/GUI-Thread. Der Zugriff aus dem Hintergrund-Thread zerstoert
+mit der Zeit den internen Qt-Speicher. Daher die zufaellig wechselnden
+Absturzarten (Heap-Korruption, Assertion, Segfault): es crasht nicht
+sofort, sondern erst wenn GUI-Thread und Hintergrund-Thread gleich-
+zeitig auf dieselben Strukturen zugreifen.
+
+Beweis, dass es ein Ausreisser war: der uebrige Code macht es bereits
+richtig. Alle anderen GUI-Aktualisierungen werden thread-sicher per
+Qt-Signal an den Hauptthread uebergeben (status_empfangen, kryo_ein_
+signal, kryo_aus_signal). Nur _update_alle_ein_button umging dieses
+Muster.
+
+
+4. BEHEBUNG
+----------------------------------------------------------------------
+Der Widget-Zugriff wird jetzt ebenfalls per Signal auf den GUI-Thread
+umgeleitet - konsistent zum restlichen Code.
+
+Datei: gui/kryo_status_panel.py
+
+   a) Neues Signal deklariert:
+      alle_ein_update_signal = pyqtSignal()
+
+   b) Im __init__ mit dem Slot verbunden (Verbindung entsteht im
+      GUI-Thread -> Qt stellt den Aufruf automatisch dorthin zu):
+      self.alle_ein_update_signal.connect(self._update_alle_ein_button)
+
+   c) Direkter Aufruf aus dem Hintergrund-Thread ersetzt:
+      vorher:  self._update_alle_ein_button()
+      nachher: self.alle_ein_update_signal.emit()
+
+Wirkung: Der Hintergrund-Thread sendet nur noch ein Signal. Der
+eigentliche Widget-Zugriff findet garantiert im Hauptthread statt
+(Queued Connection). Die Ursache der Abstuerze ist damit beseitigt.
+
+
+5. STATUS
+----------------------------------------------------------------------
+- Aenderung umgesetzt und syntaktisch geprueft (py_compile OK).
+- Nach GitHub gesichert (Repository jumbocontrol, Branch main).
+- Ein Praxistest ist nur mit angeschlossener Hardware sinnvoll; die
+  betroffene Absturzstelle sollte im regulaeren Betrieb nicht mehr
+  auftreten.
+
+
+6. HINWEIS FUER DIE ZUKUNFT
+----------------------------------------------------------------------
+Grundregel bei dieser Software: Jeder Zugriff auf GUI-Elemente (Buttons,
+Labels, Styles, Plots) MUSS aus dem Hauptthread erfolgen. Aus einem
+Hintergrund-Thread niemals direkt ein Widget anfassen, sondern immer
+per pyqtSignal an den Hauptthread uebergeben.
+======================================================================
