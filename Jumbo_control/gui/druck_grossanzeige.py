@@ -46,6 +46,8 @@ class DruckGrossanzeige(QWidget):
         self.resize(500, 420)
         self._font_size = _FONT_DEF
         self._anzeigen  = {}   # name → (wert_lbl, status_lbl, farbe)
+        self._kalibriert   = True    # wird vom DruckPanel gesetzt
+        self._letzte_werte = None
         self._build_ui()
         # Theme-Farben aus themes.py übernehmen
         from gui.themes import DARK_THEME
@@ -134,13 +136,26 @@ class DruckGrossanzeige(QWidget):
         event.ignore()
         self.hide()
 
+    # ── Kalibriert / unkalibriert (vom DruckPanel gesteuert) ──
+    def set_kalibriert(self, kalibriert: bool):
+        self._kalibriert = kalibriert
+        if self._letzte_werte is not None:
+            self.aktualisieren(self._letzte_werte)
+
     # ── Daten-Update (gleiche Signatur wie DruckPanel.aktualisieren) ──
     def aktualisieren(self, werte: dict):
         # CENT → CENTER normalisieren (kommt selten vor, aber sicher)
         if "CENT" in werte and "CENTER" not in werte:
             werte = {**werte, "CENTER": werte["CENT"]}
+        self._letzte_werte = werte
 
+        from gui.druck_panel import kalibrierter_druck, kal_zusatz
         for name, (wert_lbl, status_lbl, _) in self._anzeigen.items():
-            text, einheit = format_druck_wert(werte.get(name, {}))
+            d = werte.get(name, {})
+            zusatz = ""
+            if self._kalibriert and d and d.get("gueltig") and d.get("mbar") is not None:
+                zusatz = kal_zusatz(name, d["mbar"])
+                d = {**d, "mbar": kalibrierter_druck(name, d["mbar"])}
+            text, einheit = format_druck_wert(d)
             wert_lbl.setText(text)
-            status_lbl.setText(einheit)
+            status_lbl.setText(einheit + zusatz if einheit else einheit)

@@ -921,6 +921,8 @@ class Hauptfenster(QMainWindow):
         from gui.druck_grossanzeige import DruckGrossanzeige
         if self._grossanzeige is None:
             self._grossanzeige = DruckGrossanzeige()
+            self._grossanzeige.set_kalibriert(self.druck_panel.kalibriert)
+            self.druck_panel.kalib_modus_geaendert.connect(self._grossanzeige.set_kalibriert)
             self._bridge.neue_druecke.connect(self._grossanzeige.aktualisieren)
         self._grossanzeige.show()
         self._grossanzeige.raise_()

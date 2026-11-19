@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from gui.plot_fenster import DetachHelper
+from daten.csv_schreiber import _km   # globaler KalibrierManager
 
 import matplotlib
 matplotlib.use("QtAgg")
@@ -42,14 +43,43 @@ EINHEITEN = {
 OVERRANGE_MBAR = 1013.25
 
 
+def kalibrierter_druck(name: str, mbar):
+    """Kalibrierter Druck in mbar, oder der Rohwert, wenn keine Kalibrierung existiert."""
+    if mbar is None or mbar <= 0 or not _km.hat_kalibrierung(name):
+        return mbar
+    return _km.korrigiere(name, mbar)
+
+
+def hat_druck_kalibrierung(name: str) -> bool:
+    return _km.hat_kalibrierung(name)
+
+
+def kal_zusatz(name: str, mbar) -> str:
+    """Kennzeichnung für die Anzeige im kalibrierten Modus."""
+    if not _km.hat_kalibrierung(name):
+        return " (unkal.)"
+    status = _km.bereich_status(name, mbar)
+    if status == "oben":
+        return " (unkal.)"            # oberhalb Kalibrierbereich → Rohwert
+    if status == "unten":
+        return " (kal., Randfaktor)"  # unterhalb → Faktor des untersten Punkts
+    return " (kal.)"
+
+
 class DruckPanel(QWidget):
-    kalib_geoeffnet       = pyqtSignal()
+    kalib_geoeffnet        = pyqtSignal()
     grossanzeige_anfordern = pyqtSignal()
+    kalib_modus_geaendert  = pyqtSignal(bool)   # True = kalibriert
 
     def __init__(self):
         super().__init__()
+        self._kalibriert     = True            # Standard: kalibrierte Werte anzeigen
+        self._letzte_werte   = {}              # letzte Rohwerte (für Umschalten)
         self._history_t      = deque(maxlen=HISTORY_MAX)
+        # Rohwerte (unkalibriert) - auch für den PDF-Bericht
         self._history_wert   = {n: deque(maxlen=HISTORY_MAX) for n in SENSOR_FARBEN}
+        # kalibriert (Sensoren ohne Kalibrierung: = Rohwert)
+        self._history_kal    = {n: deque(maxlen=HISTORY_MAX) for n in SENSOR_FARBEN}
         self._history_status = {n: deque(maxlen=HISTORY_MAX) for n in SENSOR_FARBEN}
         self._lines          = {}
         self._theme          = None
@@ -204,6 +234,19 @@ class DruckPanel(QWidget):
         self._cmb_einheit.currentTextChanged.connect(self._on_einheit)
         layout.addWidget(self._cmb_einheit)
 
+        layout.addWidget(QLabel("Werte:"))
+        self._cmb_kalib = QComboBox()
+        self._cmb_kalib.addItems(["kalibriert", "unkalibriert"])
+        ohne = [n for n in SENSOR_FARBEN if not hat_druck_kalibrierung(n)]
+        tip = ("kalibriert: Werte mit Kalibrierkurve korrigiert (Fenster 'Kalibrierung')\n"
+               "unkalibriert: Rohwerte der MaxiGauge\n")
+        if ohne:
+            tip += f"Ohne Kalibrierung (immer Rohwert): {', '.join(ohne)}\n"
+        tip += "Betrifft Anzeige, Plot, Alarmgrenze und Großanzeige - CSV/PDF unverändert."
+        self._cmb_kalib.setToolTip(tip)
+        self._cmb_kalib.currentIndexChanged.connect(self._on_kalib)
+        layout.addWidget(self._cmb_kalib)
+
         layout.addWidget(self._vsep())
         layout.addWidget(QLabel("Skala:"))
         self._rb_log = QRadioButton("Log")
@@ -340,8 +383,24 @@ class DruckPanel(QWidget):
 
     def _on_einheit(self, einheit: str):
         self._einheit = einheit
-        self._ax.set_ylabel(f"Druck [{einheit}]")
+        self._update_ylabel()
+        self._anzeigen_aktualisieren()
         self._update_plot()
+
+    def _on_kalib(self, idx: int):
+        self._kalibriert = (idx == 0)
+        self._update_ylabel()
+        self._anzeigen_aktualisieren()
+        self._update_plot()
+        self.kalib_modus_geaendert.emit(self._kalibriert)
+
+    @property
+    def kalibriert(self) -> bool:
+        return self._kalibriert
+
+    def _update_ylabel(self):
+        zusatz = "" if self._kalibriert else " - unkalibriert"
+        self._ax.set_ylabel(f"Druck [{self._einheit}]{zusatz}")
 
     def _on_skala(self, log: bool):
         self._ax.set_yscale("log" if log else "linear")
@@ -407,31 +466,53 @@ class DruckPanel(QWidget):
 
         jetzt = datetime.now()
         self._history_t.append(jetzt)
+        self._letzte_werte = werte
 
-        neue_alarme = set()
         for name in SENSOR_FARBEN:
             d      = werte.get(name, {})
             status = d.get("status", "") if d else ""
             val    = d.get("mbar") if d and d.get("gueltig") else None
 
-            is_overrange = status in ("Overrange", "Underrange", "Sensor error",
-                                      "Sensor off", "No sensor", "Identification error") \
-                           or (val is None and status)
+            is_overrange = self._ist_overrange(status, val)
             plot_val = val if val is not None else (OVERRANGE_MBAR if is_overrange else None)
+            kal_val  = kalibrierter_druck(name, val) if val is not None else plot_val
             self._history_wert[name].append(plot_val)
+            self._history_kal[name].append(kal_val)
             self._history_status[name].append(status)
 
+        self._anzeigen_aktualisieren()
+        self._update_plot()
+
+    @staticmethod
+    def _ist_overrange(status: str, val) -> bool:
+        return bool(status in ("Overrange", "Underrange", "Sensor error",
+                               "Sensor off", "No sensor", "Identification error")
+                    or (val is None and status))
+
+    def _anzeigen_aktualisieren(self):
+        """Anzeigewerte + Alarm aus den letzten Rohwerten im aktuellen Modus."""
+        werte = self._letzte_werte
+        neue_alarme = set()
+        for name in SENSOR_FARBEN:
+            d      = werte.get(name, {})
+            status = d.get("status", "") if d else ""
+            val    = d.get("mbar") if d and d.get("gueltig") else None
             lbl, status_lbl, farbe, _ = self._anzeigen[name]
 
-            if is_overrange:
+            if self._ist_overrange(status, val):
                 lbl.setText("Overrange")
                 status_lbl.setText(status)
                 if self._alarm_aktiv:
                     neue_alarme.add(name)
             elif val is not None:
-                lbl.setText(f"{self._umrechnen(val):.2E}")
-                status_lbl.setText(self._einheit)
-                if self._alarm_aktiv and val >= self._alarm_grenze:
+                if self._kalibriert:
+                    anzeige = kalibrierter_druck(name, val)
+                    zusatz  = kal_zusatz(name, val)
+                else:
+                    anzeige, zusatz = val, ""
+                lbl.setText(f"{self._umrechnen(anzeige):.2E}")
+                status_lbl.setText(self._einheit + zusatz)
+                if self._alarm_aktiv and anzeige >= self._alarm_grenze:
                     neue_alarme.add(name)
             else:
                 lbl.setText("---")
@@ -445,8 +526,6 @@ class DruckPanel(QWidget):
             self._alarmierende.clear()
             self._blink_timer.stop()
             self._blink_reset()
-
-        self._update_plot()
 
     def get_tages_daten(self) -> dict:
         """
@@ -499,8 +578,9 @@ class DruckPanel(QWidget):
         x = [t_list[i] for i in idx]
         updated = False
 
+        historie = self._history_kal if self._kalibriert else self._history_wert
         for name, line in self._lines.items():
-            y_all = list(self._history_wert[name])
+            y_all = list(historie[name])
             y     = [y_all[i] for i in idx]
             xc    = [x[j] for j, v in enumerate(y) if v is not None and v > 0]
             yc    = [self._umrechnen(v) for v in y if v is not None and v > 0]

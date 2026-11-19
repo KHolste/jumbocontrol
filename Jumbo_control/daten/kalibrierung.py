@@ -53,22 +53,27 @@ class Kalibrierung:
     def korrigiere(self, messwert: float) -> float:
         """
         Interpoliert log-linear zwischen den Kalibrierpunkten.
-        Außerhalb des Bereichs: lineare Extrapolation im log-Raum.
+
+        Außerhalb des Kalibrierbereichs wird NICHT extrapoliert (die frühere
+        log-lineare Extrapolation lief bei BA davon, z.B. 1000 mbar → 135 bar):
+          - unterhalb: Korrekturfaktor des untersten Punkts konstant halten
+            (keine Stufe im Arbeitsbereich beim Abpumpen)
+          - oberhalb:  unkalibrierter Messwert (Röhre außerhalb ihres
+            kalibrierten Bereichs; DOOR/BA-Faktor am oberen Rand ≈ 1)
         """
         if not self._punkte or messwert <= 0:
             return messwert
 
-        # Unter dem niedrigsten Kalibrierpunkt
+        # Unter dem niedrigsten Kalibrierpunkt → Randfaktor
         if messwert <= self._punkte[0][0]:
-            x1, y1 = self._punkte[0]
-            x2, y2 = self._punkte[1]
-            return self._log_interp(messwert, x1, y1, x2, y2)
+            x0, y0 = self._punkte[0]
+            return messwert * (y0 / x0)
 
-        # Über dem höchsten Kalibrierpunkt
-        if messwert >= self._punkte[-1][0]:
-            x1, y1 = self._punkte[-2]
-            x2, y2 = self._punkte[-1]
-            return self._log_interp(messwert, x1, y1, x2, y2)
+        # Über dem höchsten Kalibrierpunkt → Rohwert
+        if messwert > self._punkte[-1][0]:
+            return messwert
+        if messwert == self._punkte[-1][0]:
+            return self._punkte[-1][1]
 
         # Zwischen zwei Punkten
         for i in range(len(self._punkte) - 1):
@@ -92,6 +97,16 @@ class Kalibrierung:
             return 10 ** ly
         except (ValueError, ZeroDivisionError):
             return x
+
+    def bereich_status(self, messwert: float) -> str:
+        """'unten' (Randfaktor), 'oben' (Rohwert) oder 'innen'."""
+        if not self._punkte or messwert is None or messwert <= 0:
+            return "innen"
+        if messwert < self._punkte[0][0]:
+            return "unten"
+        if messwert > self._punkte[-1][0]:
+            return "oben"
+        return "innen"
 
     def abweichung_prozent(self, messwert: float) -> float:
         """Relative Abweichung in %."""
@@ -268,6 +283,12 @@ class KalibrierManager:
         if sensor in self._kurven and messwert is not None and messwert > 0:
             return self._kurven[sensor].korrigiere(messwert)
         return messwert
+
+    def bereich_status(self, sensor: str, messwert: float) -> str:
+        """'unten', 'oben' oder 'innen' (auch ohne Kalibrierung)."""
+        if sensor in self._kurven:
+            return self._kurven[sensor].bereich_status(messwert)
+        return "innen"
 
     def abweichung(self, sensor: str, messwert: float) -> float:
         """Abweichung in %."""
