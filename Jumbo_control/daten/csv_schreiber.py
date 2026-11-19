@@ -121,33 +121,69 @@ class CsvSchreiber:
         except Exception:
             pass  # Nächster Zyklus versucht es erneut
 
+    def _datei_hat_cvd_spalten(self, datei: str) -> bool:
+        """True, wenn die (Tages-)Datei das Format mit _cvd-Spalten hat bzw. neu ist.
+
+        Eine bereits bestehende Datei mit altem Kopf (ohne _cvd) wird im alten
+        Format weitergeschrieben, damit jede Datei in sich konsistent bleibt.
+        """
+        if not hasattr(self, "_cvd_format"):
+            self._cvd_format = {}
+        if datei not in self._cvd_format:
+            if not os.path.exists(datei):
+                return True          # neue Datei → neues Format (nicht cachen)
+            try:
+                with open(datei, "r", encoding="utf-8") as f:
+                    kopf = f.readline()
+                self._cvd_format[datei] = "_cvd" in kopf
+            except Exception:
+                return False
+        return self._cvd_format[datei]
+
     def speichere_temperaturen(self, werte: dict):
         """
-        Speichert Temperaturmessung in Kelvin + Rohdaten (Ohm).
+        Speichert Temperaturmessung in Kelvin + Rohdaten (Ohm) + CVD.
         werte = Rückgabe von TemperaturMessung.messen()
-        Spalten: Sensorname (K), Sensorname_ohm (Ω)
-        """
-        iso_lok, mjd, iso_utc = _zeitstempel()
 
-        # Header: erst alle Kelvin-Spalten, dann alle Ohm-Spalten
+        Spalten:
+          Sensorname      – Temperatur [K]: kalibriert (PT100-Tabelle), sonst CVD
+          Sensorname_ohm  – gemessener Widerstand [Ω] (Rohdaten)
+          ... danach, am ENDE der Zeile (alte Spaltenpositionen bleiben gleich):
+          Sensorname_cvd  – unkalibrierte Temperatur [K] nach CVD-Formel aus _ohm
+        """
+        from daten.kalibrierung import cvd_kelvin
+        from config import TEMP_MIN, TEMP_MAX
+
+        iso_lok, mjd, iso_utc = _zeitstempel()
+        datei = self._dateiname("temperatur")
+        mit_cvd = self._datei_hat_cvd_spalten(datei)
+
         header = ["ISO_lokal", "MJD", "UTC"]
         for name in TEMP_SPALTEN:
             header.append(name)
             header.append(f"{name}_ohm")
+        if mit_cvd:
+            header += [f"{name}_cvd" for name in TEMP_SPALTEN]
 
         zeile = [iso_lok, f"{mjd:.6f}", iso_utc]
+        cvd_spalten = []
         for name in TEMP_SPALTEN:
             d = werte.get(name)
             if d and d["kelvin"] is not None:
                 zeile.append(f"{d['kelvin']:.3f}")
             else:
                 zeile.append("NaN")
-            if d and d.get("ohm") is not None:
-                zeile.append(f"{d['ohm']:.3f}")
+            ohm = d.get("ohm") if d else None
+            zeile.append(f"{ohm:.3f}" if ohm is not None else "NaN")
+            k = cvd_kelvin(ohm) if ohm is not None else None
+            if k is not None and TEMP_MIN <= k - 273.15 <= TEMP_MAX:
+                cvd_spalten.append(f"{k:.3f}")
             else:
-                zeile.append("NaN")
+                cvd_spalten.append("NaN")
+        if mit_cvd:
+            zeile += cvd_spalten
 
-        self._schreibe_zeile(self._dateiname("temperatur"), header, zeile)
+        self._schreibe_zeile(datei, header, zeile)
 
     def speichere_druecke(self, werte: dict):
         """

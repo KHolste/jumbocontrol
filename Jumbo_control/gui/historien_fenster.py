@@ -418,7 +418,7 @@ class HistorienFenster(QWidget):
         # Sensoren aus Datei + bekannte Sensoren aus Checkboxen
         sensoren_in_datei = [s for s in d.keys()
                              if s not in ("ISO_lokal", "UTC", "MJD") and
-                             not s.endswith(("_status", "_kal"))]
+                             not s.endswith(("_status", "_kal", "_cvd"))]
         sensoren = [s for s in sensoren_in_datei
                     if s not in self._sensor_checks or
                     self._sensor_checks[s].isChecked()]
