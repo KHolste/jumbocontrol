@@ -82,9 +82,8 @@ PT100_KALIBRIERUNG = {
     "Kryo 7 In": "Pt100_Kryo7_In.csv",
     "Kryo 7":    "Pt100_Kryo7.csv",
     "Kryo 8 In": "Pt100_Kryo8_In.csv",
-    # Deaktiviert: Die Kalibrierung zeigt einen Offset von ~ +2,5..3 Ohm gegenüber
+    # Achtung: Die Kalibrierung zeigt einen Offset von ~ +2,5..3 Ohm gegenüber
     # "Kryo 8 In", den die Anlage selbst nicht zeigt (bei Raumtemperatur messen beide
-    # ~110,7 Ohm). Mit Tabelle läge "Kryo 8" ~8 K unter allen anderen Sensoren.
-    # Erst nach Klärung/Neukalibrierung aktivieren.
-    # "Kryo 8":    "Pt100_Kryo8.csv",
+    # ~110,5 Ohm). Mit Tabelle liegt "Kryo 8" daher ~8 K unter "Kryo 8 In".
+    "Kryo 8":    "Pt100_Kryo8.csv",
 }
