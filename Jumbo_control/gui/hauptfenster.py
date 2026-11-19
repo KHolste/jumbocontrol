@@ -21,6 +21,7 @@ from gui.temp_panel       import TempPanel
 from gui.steckdosen_panel import SteckdosenPanel
 from gui.themes              import DARK_THEME, LIGHT_THEME, build_stylesheet
 from gui.kalibrierung_fenster  import KalibrierFenster
+from gui.temp_kalibrierung_fenster import TempKalibrierFenster
 from gui.historien_fenster      import HistorienFenster
 from gui.alarm_einstellungen   import AlarmEinstellungen, AlarmEinstellungenDialog
 from steuerung            import Messzyklus
@@ -70,6 +71,7 @@ class Hauptfenster(QMainWindow):
         self._zyklus = Messzyklus(intervall=5.0)
 
         self._kalib_fenster    = None
+        self._temp_kalib_fenster = None
         self._grossanzeige     = None
         self._historien_fenster = None
         self._hw_leds = {}   # keine LEDs im Header mehr, nur Statusleiste
@@ -502,6 +504,10 @@ class Hauptfenster(QMainWindow):
         act_kalib.triggered.connect(self._kalib_fenster_oeffnen)
         extras.addAction(act_kalib)
 
+        act_temp_kalib = QAction("Kalibrierte Temperaturen...", self)
+        act_temp_kalib.triggered.connect(self._temp_kalib_fenster_oeffnen)
+        extras.addAction(act_temp_kalib)
+
         act_alarm = QAction("Alarm && Filter...", self)
         act_alarm.triggered.connect(self._alarm_einstellungen_oeffnen)
         extras.addAction(act_alarm)
@@ -558,6 +564,7 @@ class Hauptfenster(QMainWindow):
         self._bridge.neue_druecke.connect(self._tcp_server.update_druck)
         self._bridge.neue_temperaturen.connect(self._tcp_server.update_temp)
         self.druck_panel.kalib_geoeffnet.connect(self._kalib_fenster_oeffnen)
+        self.temp_panel.kalib_geoeffnet.connect(self._temp_kalib_fenster_oeffnen)
         self.druck_panel.grossanzeige_anfordern.connect(self._grossanzeige_oeffnen)
 
         # ── Sicherheitsverriegelung Heater ↔ Kryos ──────────
@@ -854,6 +861,15 @@ class Hauptfenster(QMainWindow):
         self._kalib_fenster.show()
         self._kalib_fenster.raise_()
         self.log("Kalibrierungsfenster geöffnet")
+
+    def _temp_kalib_fenster_oeffnen(self):
+        if self._temp_kalib_fenster is None:
+            self._temp_kalib_fenster = TempKalibrierFenster()
+            # Temperaturwerte (inkl. Widerstand) weiterleiten
+            self._bridge.neue_temperaturen.connect(self._temp_kalib_fenster.aktualisieren)
+        self._temp_kalib_fenster.show()
+        self._temp_kalib_fenster.raise_()
+        self.log("Fenster 'Kalibrierte Temperaturen' geöffnet")
 
     def _regen_toggle(self, aktiv: bool):
         if aktiv:
@@ -1302,7 +1318,7 @@ class Hauptfenster(QMainWindow):
             pass
         # Fenster schließen
         for fenster in (self._grossanzeige, self._kalib_fenster,
-                        self._historien_fenster):
+                        self._temp_kalib_fenster, self._historien_fenster):
             if fenster is not None:
                 try:
                     fenster.close()

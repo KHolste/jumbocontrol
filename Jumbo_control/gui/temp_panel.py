@@ -10,8 +10,10 @@ from PyQt6.QtWidgets import (
     QCheckBox, QScrollArea, QComboBox, QSpinBox, QGroupBox, QSizePolicy, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QLabel, QFrame
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from gui.plot_fenster import DetachHelper
+from daten.kalibrierung import cvd_kelvin
+from config import TEMP_MIN, TEMP_MAX
 
 import matplotlib
 matplotlib.use("QtAgg")
@@ -48,12 +50,27 @@ FARBEN = [
 ]
 
 
+def _cvd_celsius(d: dict):
+    """Unkalibrierte Temperatur (CVD-Formel) in °C aus dem Widerstand, sonst None."""
+    k = cvd_kelvin(d.get("ohm")) if d else None
+    if k is None:
+        return None
+    c = k - 273.15
+    return c if TEMP_MIN <= c <= TEMP_MAX else None
+
+
 class TempPanel(QWidget):
+
+    kalib_geoeffnet = pyqtSignal()
 
     def __init__(self):
         super().__init__()
         self._history_t    = deque(maxlen=HISTORY_MAX)
+        # kalibriert (Tabelle, falls vorhanden, sonst CVD) – auch für den PDF-Bericht
         self._history_wert = {n: deque(maxlen=HISTORY_MAX) for n in SENSOREN}
+        # unkalibriert (immer CVD-Formel aus dem Widerstand)
+        self._history_cvd  = {n: deque(maxlen=HISTORY_MAX) for n in SENSOREN}
+        self._kalibriert   = True
         self._lines   = {}
         self._checks       = {}
         self._wert_labels  = {}
@@ -114,6 +131,19 @@ class TempPanel(QWidget):
         toolbar_row_layout.setContentsMargins(0, 0, 0, 0)
         toolbar_row_layout.setSpacing(4)
         toolbar_row_layout.addWidget(self._toolbar, 1)
+
+        btn_kalib = QPushButton("Kalibrierung")
+        btn_kalib.setStyleSheet("""
+            QPushButton {
+                background: #4f8ef7; border: none; border-radius: 4px;
+                color: white; font-size: 10px; font-weight: 700; padding: 3px 10px;
+            }
+            QPushButton:hover { background: #2563eb; }
+        """)
+        btn_kalib.clicked.connect(self.kalib_geoeffnet.emit)
+        btn_kalib.setToolTip("Fenster: kalibrierte und unkalibrierte Temperaturen im Vergleich")
+        toolbar_row_layout.addWidget(btn_kalib)
+
         self._btn_popout = QPushButton("⇱ Pop-out")
         self._btn_popout.setFixedSize(110, 34)
         self._btn_popout.setToolTip("Plot in eigenem Fenster öffnen")
@@ -234,6 +264,17 @@ class TempPanel(QWidget):
         self._cmb_einheit.currentTextChanged.connect(self._on_einheit)
         layout.addWidget(self._cmb_einheit)
 
+        layout.addWidget(QLabel("Werte:"))
+        self._cmb_kalib = QComboBox()
+        self._cmb_kalib.addItems(["kalibriert", "unkalibriert (CVD)"])
+        self._cmb_kalib.setToolTip(
+            "kalibriert: PT100-Kalibriertabelle (falls vorhanden, sonst CVD-Formel)\n"
+            "unkalibriert: immer CVD-Formel aus dem gemessenen Widerstand\n"
+            "Betrifft nur Anzeige und Plot – CSV und PDF bleiben kalibriert."
+        )
+        self._cmb_kalib.currentIndexChanged.connect(self._on_kalib)
+        layout.addWidget(self._cmb_kalib)
+
         layout.addStretch()
 
         btn_einst = QPushButton("⚙ Einstellungen")
@@ -284,8 +325,32 @@ class TempPanel(QWidget):
 
     def _on_einheit(self, einheit: str):
         self._einheit = einheit
-        self._ax.set_ylabel(f"Temperatur [{einheit}]")
+        self._update_ylabel()
+        self._update_labels()
         self._update_plot()
+
+    def _on_kalib(self, idx: int):
+        self._kalibriert = (idx == 0)
+        self._update_ylabel()
+        self._update_labels()
+        self._update_plot()
+
+    def _update_ylabel(self):
+        zusatz = "" if self._kalibriert else " – unkalibriert (CVD)"
+        self._ax.set_ylabel(f"Temperatur [{self._einheit}]{zusatz}")
+
+    def _aktive_historie(self) -> dict:
+        return self._history_wert if self._kalibriert else self._history_cvd
+
+    def _update_labels(self):
+        hist = self._aktive_historie()
+        for name, lbl in self._wert_labels.items():
+            val = hist[name][-1] if hist[name] else None
+            if val is not None:
+                v = val + 273.15 if self._einheit == "K" else val
+                lbl.setText(f"{v:.1f} {self._einheit}")
+            else:
+                lbl.setText("–")
 
     def _toggle(self, name: str, state: int):
         self._lines[name].set_visible(bool(state))
@@ -321,12 +386,8 @@ class TempPanel(QWidget):
             d   = werte.get(name, {})
             val = d.get("celsius") if d and d.get("gueltig") else None
             self._history_wert[name].append(val)
-            if name in self._wert_labels:
-                if val is not None:
-                    v = val + 273.15 if self._einheit == "K" else val
-                    self._wert_labels[name].setText(f"{v:.1f} {self._einheit}")
-                else:
-                    self._wert_labels[name].setText("–")
+            self._history_cvd[name].append(_cvd_celsius(d))
+        self._update_labels()
         self._update_plot()
 
     def get_tages_daten(self) -> dict:
@@ -383,13 +444,13 @@ class TempPanel(QWidget):
         for name, line in self._lines.items():
             if not self._checks[name].isChecked():
                 continue
-            y_all = list(self._history_wert[name])
+            y_all = list(self._aktive_historie()[name])
             y     = [y_all[i] for i in idx]
             xc    = [x[j] for j, v in enumerate(y) if v is not None]
             yc    = [v + 273.15 if self._einheit == "K" and v is not None else v
                      for v in y if v is not None]
+            line.set_data(xc, yc)   # auch leer setzen, damit beim Umschalten nichts stehen bleibt
             if xc:
-                line.set_data(xc, yc)
                 updated = True
 
         if updated:

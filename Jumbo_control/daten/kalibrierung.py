@@ -112,8 +112,10 @@ class Kalibrierung:
         return self._punkte
 
 
-def _cvd_kelvin(R: float):
+def cvd_kelvin(R: float):
     """Callendar-Van Dusen (quadratisch): PT100-Widerstand [Ohm] → Kelvin."""
+    if R is None:
+        return None
     A, B = 0.39083, 5.775e-5
     inhalt = A**2 + 4 * B * (100 - R)
     if inhalt < 0:
@@ -164,7 +166,7 @@ class Pt100Kalibrierung:
         p = self._punkte
         if R < p[0][0] or R > p[-1][0]:
             r_rand, t_rand = p[0] if R < p[0][0] else p[-1]
-            t_cvd, t_cvd_rand = _cvd_kelvin(R), _cvd_kelvin(r_rand)
+            t_cvd, t_cvd_rand = cvd_kelvin(R), cvd_kelvin(r_rand)
             if t_cvd is None or t_cvd_rand is None:
                 return None
             return t_cvd + (t_rand - t_cvd_rand)
@@ -217,6 +219,22 @@ class KalibrierManager:
 
     def hat_pt100_kalibrierung(self, name: str) -> bool:
         return name in self._pt100
+
+    @property
+    def pt100_sensoren(self) -> list:
+        """Kanalnamen mit PT100-Kalibriertabelle (Reihenfolge wie in config)."""
+        return list(self._pt100.keys())
+
+    def pt100_info(self, name: str) -> dict:
+        if name in self._pt100:
+            k = self._pt100[name]
+            t = [p[1] for p in k.punkte]
+            return {
+                "datei":     os.path.basename(k.datei),
+                "punkte":    len(k.punkte),
+                "bereich_k": (min(t), max(t)),
+            }
+        return {}
 
     def pt100_ohm_zu_kelvin(self, name: str, R: float):
         """Kelvin aus Widerstand per Kalibriertabelle, None wenn nicht möglich."""
