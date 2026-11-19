@@ -66,7 +66,9 @@ MESS_INTERVALL_DEFAULT_S = 5.0   # Startwert
 # ── PT100-Kalibrierung (Temperatur) ──────────────────────────
 # Zuordnung: Sensorname → Kalibrierdatei im Ordner kalibrierung/
 # Nur eingetragene Sensoren nutzen die Tabelle; alle anderen → CVD-Formel.
-# Dateinamen sind Nummern (1-6) entsprechend der Einbaureihenfolge.
+# Kryo 1/2: Dateinamen sind Nummern (1-6) entsprechend der Einbaureihenfolge.
+# Kryo 4/7/8: Kalibrierung 2026-11, Rohdaten in kalibrierung/rohdaten/.
+# Format: "Temperature,Resistance" / "K,Ohm" / Werte mit Punkt als Dezimalzeichen.
 PT100_KALIBRIERUNG = {
     "Kryo 1 In": "Pt100_1.csv",
     "Kryo 1":    "Pt100_2.csv",
@@ -74,4 +76,15 @@ PT100_KALIBRIERUNG = {
     "Kryo 2 In": "Pt100_4.csv",
     "Kryo 2":    "Pt100_5.csv",
     "Kryo 2b":   "Pt100_6.csv",
+    "Kryo 4 In": "Pt100_Kryo4_In.csv",
+    "Kryo 4":    "Pt100_Kryo4.csv",
+    "Kryo 4b":   "Pt100_Kryo4b.csv",
+    "Kryo 7 In": "Pt100_Kryo7_In.csv",
+    "Kryo 7":    "Pt100_Kryo7.csv",
+    "Kryo 8 In": "Pt100_Kryo8_In.csv",
+    # Deaktiviert: Die Kalibrierung zeigt einen Offset von ~ +2,5..3 Ohm gegenüber
+    # "Kryo 8 In", den die Anlage selbst nicht zeigt (bei Raumtemperatur messen beide
+    # ~110,7 Ohm). Mit Tabelle läge "Kryo 8" ~8 K unter allen anderen Sensoren.
+    # Erst nach Klärung/Neukalibrierung aktivieren.
+    # "Kryo 8":    "Pt100_Kryo8.csv",
 }

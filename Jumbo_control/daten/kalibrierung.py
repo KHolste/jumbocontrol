@@ -12,6 +12,7 @@ import os
 import csv
 import math
 import glob
+import bisect
 
 KALIB_PFAD = "kalibrierung"
 
@@ -111,16 +112,117 @@ class Kalibrierung:
         return self._punkte
 
 
+def _cvd_kelvin(R: float):
+    """Callendar-Van Dusen (quadratisch): PT100-Widerstand [Ohm] → Kelvin."""
+    A, B = 0.39083, 5.775e-5
+    inhalt = A**2 + 4 * B * (100 - R)
+    if inhalt < 0:
+        return None
+    return (-A + math.sqrt(inhalt)) / (-2 * B) + 273.15
+
+
+class Pt100Kalibrierung:
+    """
+    Kalibriertabelle für einen PT100-Sensor (Widerstand → Temperatur).
+
+    Dateiformat (Komma-getrennt, Punkt als Dezimaltrennzeichen):
+        Temperature,Resistance
+        K,Ohm
+        19.85,2.0977
+        ...
+
+    Innerhalb der Tabelle: lineare Interpolation.
+    Außerhalb: CVD-Formel, um die Abweichung am Tabellenrand verschoben
+    (stetiger Übergang, kein Sprung an der Tabellengrenze).
+    """
+
+    def __init__(self, sensor: str, datei: str):
+        self.sensor  = sensor
+        self.datei   = datei
+        self._punkte = []   # [(ohm, kelvin), ...] nach Widerstand sortiert
+        self._laden(datei)
+        if len(self._punkte) < 2:
+            raise ValueError(f"{datei}: weniger als 2 Kalibrierpunkte")
+
+    def _laden(self, datei: str):
+        with open(datei, "r", encoding="utf-8") as f:
+            for zeile in f:
+                teile = zeile.strip().split(",")
+                if len(teile) < 2:
+                    continue
+                try:
+                    kelvin = float(teile[0])
+                    ohm    = float(teile[1])
+                except ValueError:
+                    continue   # Kopfzeilen
+                self._punkte.append((ohm, kelvin))
+        self._punkte.sort()
+
+    def ohm_zu_kelvin(self, R: float):
+        if R is None or R <= 0:
+            return None
+        p = self._punkte
+        if R < p[0][0] or R > p[-1][0]:
+            r_rand, t_rand = p[0] if R < p[0][0] else p[-1]
+            t_cvd, t_cvd_rand = _cvd_kelvin(R), _cvd_kelvin(r_rand)
+            if t_cvd is None or t_cvd_rand is None:
+                return None
+            return t_cvd + (t_rand - t_cvd_rand)
+        i = bisect.bisect_left(p, (R,))
+        if i == 0:
+            return p[0][1]
+        (r1, t1), (r2, t2) = p[i - 1], p[i]
+        if r2 == r1:
+            return t1
+        return t1 + (t2 - t1) * (R - r1) / (r2 - r1)
+
+    @property
+    def bereich_ohm(self) -> tuple:
+        return self._punkte[0][0], self._punkte[-1][0]
+
+    @property
+    def punkte(self) -> list:
+        return self._punkte
+
+
 class KalibrierManager:
     """
     Verwaltet Kalibrierdaten für alle Sensoren.
-    Lädt automatisch alle CSV-Dateien aus dem kalibrierung/-Ordner.
+    Druck: lädt automatisch alle CSV-Dateien aus dem kalibrierung/-Ordner
+           (außer PT100-Dateien).
+    PT100: lädt die in config.PT100_KALIBRIERUNG eingetragenen Dateien.
     """
 
     def __init__(self, pfad: str = KALIB_PFAD):
         self._pfad        = pfad
-        self._kurven      = {}   # sensor → Kalibrierung
+        self._kurven      = {}   # sensor → Kalibrierung (Druck)
+        self._pt100       = {}   # Kanalname → Pt100Kalibrierung
+        self._laden_pt100()
         self._laden()
+
+    def _laden_pt100(self):
+        try:
+            from config import PT100_KALIBRIERUNG
+        except ImportError:
+            return
+        from log_utils import tprint
+        for name, dateiname in PT100_KALIBRIERUNG.items():
+            datei = os.path.join(self._pfad, dateiname)
+            try:
+                self._pt100[name] = Pt100Kalibrierung(name, datei)
+                tprint("Kalibrierung", f"PT100 {name}: {datei} geladen "
+                       f"({len(self._pt100[name].punkte)} Punkte)")
+            except Exception as e:
+                tprint("Kalibrierung", f"PT100 {name}: Fehler {datei}: {e}")
+
+    def hat_pt100_kalibrierung(self, name: str) -> bool:
+        return name in self._pt100
+
+    def pt100_ohm_zu_kelvin(self, name: str, R: float):
+        """Kelvin aus Widerstand per Kalibriertabelle, None wenn nicht möglich."""
+        if name in self._pt100:
+            return self._pt100[name].ohm_zu_kelvin(R)
+        return None
 
     def _laden(self):
         if not os.path.isdir(self._pfad):
@@ -128,6 +230,8 @@ class KalibrierManager:
         for datei in glob.glob(os.path.join(self._pfad, "*.csv")):
             # Sensorname aus Dateiname: DOOR_17779.csv → DOOR
             basis  = os.path.basename(datei)
+            if basis.lower().startswith("pt100"):
+                continue   # PT100-Tabellen, siehe _laden_pt100
             sensor = basis.split("_")[0].upper()
             try:
                 self._kurven[sensor] = Kalibrierung(sensor, datei)
