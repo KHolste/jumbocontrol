@@ -12,4 +12,11 @@ def tprint(tag: str, msg: str) -> None:
     Format: DD.MM.YYYY HH:MM:SS [Tag] Nachricht
     """
     ts = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-    print(f"{ts} [{tag}] {msg}")
+    # Konsolenausgabe darf niemals das Programm stören: Ist die Konsole
+    # geschlossen/nicht vorhanden (OSError WinError 233, sys.stdout None) oder
+    # kann ein Zeichen nicht kodiert werden, wird die Meldung verworfen.
+    # Früher konnte das den Messzyklus-Thread beenden.
+    try:
+        print(f"{ts} [{tag}] {msg}", flush=True)
+    except Exception:
+        pass

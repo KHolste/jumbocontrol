@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QDateTimeEdit, QTabWidget, QCheckBox, QStatusBar,
     QDoubleSpinBox,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QSize
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QSize, QThread
 from PyQt6.QtGui import QFont, QAction
 
 from gui.druck_panel      import DruckPanel
@@ -29,6 +29,7 @@ from config               import MESS_INTERVALL_MIN_S, MESS_INTERVALL_DEFAULT_S
 from gui.adaptiv_dialog   import AdaptivDialog
 from gui.pdf_report       import erstelle_tagesbericht
 from gui.tcp_server       import TcpMessServer
+from log_utils            import tprint
 
 
 class SignalBridge(QObject):
@@ -121,6 +122,15 @@ class Hauptfenster(QMainWindow):
             sb.addWidget(led)
             sb.addWidget(lbl)
             self._sb_leds[name] = led
+
+        # Watchdog: Alter der letzten Messung
+        self._sb_watchdog = QLabel("Letzte Messung: –")
+        self._sb_watchdog.setStyleSheet("color: #94a3b8; font-size: 10px; padding-right: 12px;")
+        self._sb_watchdog.setToolTip(
+            "Zeit seit der letzten erfolgreichen Messung (Temperatur oder Druck).\n"
+            "Rot = es kommen keine neuen Messwerte – angezeigte Werte sind veraltet."
+        )
+        sb.addPermanentWidget(self._sb_watchdog)
 
         # Dauerhafte Meldung rechts
         self._sb_msg = QLabel("Bereit")
@@ -595,6 +605,13 @@ class Hauptfenster(QMainWindow):
         self._zyklus._alarm_einst      = self._alarm_einst
         self._zyklus.starten()
         self.log("System gestartet")
+
+        # Watchdog: prüft alle 5 s, ob noch Messwerte ankommen
+        self._watchdog_start   = datetime.now().timestamp()
+        self._watchdog_alarm   = None     # None | "veraltet" | "thread"
+        self._watchdog_timer   = QTimer(self)
+        self._watchdog_timer.timeout.connect(self._watchdog_pruefen)
+        self._watchdog_timer.start(5000)
         self._startup_checks()
 
     # ── Uhr ───────────────────────────────────────────────────
@@ -616,6 +633,12 @@ class Hauptfenster(QMainWindow):
 
     # ── Log ───────────────────────────────────────────────────
     def log(self, text: str, farbe: str = None):
+        # Thread-sicher: log() wird auch aus Hintergrund-Threads aufgerufen
+        # (Kryo-/Steckdosen-/XSP01R-Schalten, Kryo-Verify). Widgets dürfen nur
+        # im GUI-Thread angefasst werden → dann per Signal weiterreichen.
+        if QThread.currentThread() is not self.thread():
+            self._bridge.log_msg.emit(text, farbe or "")
+            return
         t = self._theme
         farbe = farbe or t["log_info"]
         stamp = t["log_stamp"]
@@ -720,6 +743,56 @@ class Hauptfenster(QMainWindow):
                 self._bridge.hw_status.emit({"XSP01R": False})
 
         threading.Thread(target=_run, daemon=True).start()
+
+    # ── Watchdog ──────────────────────────────────────────────
+    WATCHDOG_MIN_S = 60.0   # Mindest-Toleranz bis zur Warnung
+
+    def _watchdog_pruefen(self):
+        """Warnt, wenn keine Messwerte mehr ankommen oder der Mess-Thread tot ist."""
+        jetzt   = datetime.now().timestamp()
+        letzte  = getattr(self._zyklus, "letzte_messung", 0.0) or 0.0
+        grenze  = max(self.WATCHDOG_MIN_S, 3 * float(self._zyklus.intervall))
+        thread  = getattr(self._zyklus, "_thread", None)
+        lebt    = thread is not None and thread.is_alive()
+
+        if letzte:
+            alter = jetzt - letzte
+            if alter < 120:
+                text = f"Letzte Messung: vor {alter:.0f} s"
+            else:
+                text = f"Letzte Messung: vor {alter/60:.0f} min"
+        else:
+            alter = jetzt - self._watchdog_start
+            text  = "Letzte Messung: noch keine"
+
+        if not lebt:
+            zustand = "thread"
+            text = "⛔ Messzyklus gestoppt"
+        elif alter > grenze:
+            zustand = "veraltet"
+            text = "⚠ " + text
+        else:
+            zustand = None
+
+        farbe = "#dc2626" if zustand else "#94a3b8"
+        gewicht = "700" if zustand else "400"
+        self._sb_watchdog.setText(text)
+        self._sb_watchdog.setStyleSheet(
+            f"color: {farbe}; font-size: 10px; font-weight: {gewicht}; padding-right: 12px;")
+
+        # Nur bei Zustandswechsel ins Log schreiben
+        if zustand != self._watchdog_alarm:
+            if zustand == "thread":
+                self.log("⛔ WATCHDOG: Der Messzyklus läuft nicht mehr – keine Messung, "
+                         "keine CSV! Bitte Programm neu starten (Details in fehler.log).",
+                         farbe=self._theme["danger"])
+            elif zustand == "veraltet":
+                self.log(f"⚠ WATCHDOG: Seit über {grenze:.0f} s keine neuen Messwerte – "
+                         "angezeigte Werte sind veraltet. Hardware-Verbindung prüfen.",
+                         farbe=self._theme["danger"])
+            elif self._watchdog_alarm is not None:
+                self.log("✓ WATCHDOG: Messwerte kommen wieder", farbe=self._theme["log_ok"])
+            self._watchdog_alarm = zustand
 
     def _update_hw_status(self, status: dict):
         farben = {True: "#16a34a", False: "#dc2626"}
@@ -1294,11 +1367,16 @@ class Hauptfenster(QMainWindow):
             self.steckdosen_panel.heater_freigeben()
 
     def closeEvent(self, event):
+        # Watchdog zuerst stoppen – sonst meldet er beim Herunterfahren
+        # fälschlich "Messzyklus gestoppt"
+        try:
+            self._watchdog_timer.stop()
+        except Exception:
+            pass
         # Alarm-Einstellungen sichern
         try:
             self._alarm_einst.speichern()
         except Exception as e:
-            from log_utils import tprint
             tprint("Shutdown", f"Alarm-Einstellungen nicht gespeichert: {e}")
         # Messzyklus stoppen (gibt Hardware frei)
         try:

@@ -5,6 +5,7 @@ Kryo 1+2 via XSP01R, Kryo 3-8 via Coolpack.
 """
 
 import threading
+from log_utils import tprint
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QGroupBox, QFrame, QPushButton, QSizePolicy, QMessageBox
@@ -294,7 +295,6 @@ class KryoStatusPanel(QWidget):
                             status_liste.append(st_csv)
     
                     except Exception as e:
-                        from log_utils import tprint
                         tprint("KryoStatusPanel", f"{name} XSP01R: {e}")
     
             except Exception as e:

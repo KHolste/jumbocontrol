@@ -20,16 +20,22 @@ FEHLER_LOG_DATEI = os.path.join(LOG_PFAD, "fehler.log")
 
 def _schreibe_fehler(typ, wert, tb):
     """Schreibt unbehandelte Exception in Logdatei."""
-    os.makedirs(LOG_PFAD, exist_ok=True)
-    zeitstempel = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    with open(FEHLER_LOG_DATEI, "a", encoding="utf-8") as f:
-        f.write(f"\n{'='*60}\n")
-        f.write(f"UNBEHANDELTE EXCEPTION – {zeitstempel}\n")
-        f.write(f"{'='*60}\n")
-        traceback.print_exception(typ, wert, tb, file=f)
-    # Auch auf Konsole ausgeben
+    try:
+        os.makedirs(LOG_PFAD, exist_ok=True)
+        zeitstempel = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        with open(FEHLER_LOG_DATEI, "a", encoding="utf-8") as f:
+            f.write(f"\n{'='*60}\n")
+            f.write(f"UNBEHANDELTE EXCEPTION – {zeitstempel}\n")
+            f.write(f"{'='*60}\n")
+            traceback.print_exception(typ, wert, tb, file=f)
+    except Exception:
+        pass
+    # Auch auf Konsole ausgeben (kann bei geschlossener Konsole scheitern)
     tprint("FEHLER", f"Unbehandelte Exception – Details in {FEHLER_LOG_DATEI}")
-    traceback.print_exception(typ, wert, tb)
+    try:
+        traceback.print_exception(typ, wert, tb)
+    except Exception:
+        pass
 
 
 def installieren():

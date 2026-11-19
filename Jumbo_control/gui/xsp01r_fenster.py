@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QFrame, QMessageBox, QGridLayout
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
 
 
@@ -141,13 +141,18 @@ class RelaisZeile(QWidget):
 class Xsp01rFenster(QWidget):
     """Statusfenster für den XSP01R mit Relais-Anzeige und Einzelsteuerung."""
 
+    # (status, fehlertext) – vom Hintergrund-Thread an den GUI-Thread
+    _status_signal = pyqtSignal(dict, str)
+
     def __init__(self, log_callback=None, parent=None):
         super().__init__(parent, Qt.WindowType.Window)
         self.setWindowTitle("XSP01R – Relais-Status")
         self.setFixedSize(580, 400)
         self.log_callback = log_callback
         self._zeilen: list[RelaisZeile] = []
+        self._abfrage_laeuft = False
         self._build_ui()
+        self._status_signal.connect(self._status_anwenden)
 
         # Auto-Update alle 2 Sekunden
         self._timer = QTimer(self)
@@ -238,23 +243,35 @@ class Xsp01rFenster(QWidget):
         layout.addWidget(self._lbl_verbindung)
 
     def _aktualisieren(self):
+        # Keine zweite Abfrage starten, solange die vorige noch läuft
+        # (sonst stauen sich bei langsamer Antwort Threads auf COM6).
+        if self._abfrage_laeuft:
+            return
+        self._abfrage_laeuft = True
+
         def _run():
+            # Nur Hardware abfragen – KEIN Widget-Zugriff im Hintergrund-Thread.
+            # Die Anzeige wird per Signal im GUI-Thread aktualisiert.
             try:
                 from hardware.geraete import get_xsp01r
                 st = get_xsp01r().status()
-                # GUI-Update im Hauptthread
-                from PyQt6.QtCore import QMetaObject, Q_ARG
-                for zeile in self._zeilen:
-                    zeile.aktualisieren(st)
-                self._lbl_verbindung.setText("● Verbunden  (COM6)")
-                self._lbl_verbindung.setStyleSheet("font-size: 10px; color: #16a34a;")
+                self._status_signal.emit(st, "")
             except Exception as e:
-                for zeile in self._zeilen:
-                    zeile.aktualisieren({})
-                self._lbl_verbindung.setText(f"● Nicht verbunden: {e}")
-                self._lbl_verbindung.setStyleSheet("font-size: 10px; color: #dc2626;")
+                self._status_signal.emit({}, str(e) or type(e).__name__)
 
         threading.Thread(target=_run, daemon=True).start()
+
+    def _status_anwenden(self, st: dict, fehler: str):
+        """Läuft im GUI-Thread."""
+        self._abfrage_laeuft = False
+        for zeile in self._zeilen:
+            zeile.aktualisieren(st)
+        if fehler:
+            self._lbl_verbindung.setText(f"● Nicht verbunden: {fehler}")
+            self._lbl_verbindung.setStyleSheet("font-size: 10px; color: #dc2626;")
+        else:
+            self._lbl_verbindung.setText("● Verbunden  (COM6)")
+            self._lbl_verbindung.setStyleSheet("font-size: 10px; color: #16a34a;")
 
     def _schnell_schalten(self, fn_name: str, label: str):
         ein = "EIN" in label

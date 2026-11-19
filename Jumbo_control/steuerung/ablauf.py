@@ -16,6 +16,11 @@ from log_utils import tprint
 
 RECONNECT_INTERVALL = 30   # Sekunden zwischen Reconnect-Versuchen
 
+# Nach so vielen aufeinanderfolgenden "Ausreißern" eines Temperatursensors gilt
+# der neue Wert als echt und wird zur neuen Referenz (verhindert, dass ein
+# Sensor nach einem echten Temperatursprung dauerhaft als ungültig gilt).
+AUSREISSER_MAX_FOLGE = 3
+
 
 class HardwareStatus:
     """Hält den Verbindungsstatus aller Hardware-Komponenten."""
@@ -55,6 +60,8 @@ class Messzyklus:
         self._aktiv              = False
         self._alarm_einst        = None   # wird von GUI gesetzt
         self._letzter_temp       = {}     # name → letzter Wert
+        self._ausreisser_folge   = {}     # name → Anzahl Ausreißer in Folge
+        self.letzte_messung      = 0.0    # time.time() der letzten erfolgreichen Messung
         self._letzter_druck      = {}     # name → (wert, zeit)
         self._aktive_temp_alarme = set()  # Sensornamen aktuell im Alarm
         self._letzte_csv_warnung = 0.0    # Cooldown für CSV-Fehlermeldungen
@@ -166,6 +173,7 @@ class Messzyklus:
                 if self._temperatur:
                     try:
                         t_werte = self._temperatur.messen()
+                        self.letzte_messung = time.time()
                         t_werte = self._pruefe_temp_spruenge(t_werte)
                         self._pruefe_alarme(t_werte)
                         if self._soll_emittieren("temp", t_werte):
@@ -179,6 +187,12 @@ class Messzyklus:
                                 self.bei_messung_temp(t_werte)
                     except Exception as e:
                         tprint("Messzyklus", f"Temperaturfehler: {e}")
+                        # NI-Task freigeben, sonst bleiben die Kanäle belegt
+                        # und der Reconnect kann scheitern.
+                        try:
+                            self._temperatur.beenden()
+                        except Exception:
+                            pass
                         self._temperatur = None
                         self._hw_status.cdaq = False
                         self._melde_hw_status()
@@ -187,6 +201,7 @@ class Messzyklus:
                 if self._druck:
                     try:
                         d_werte = self._druck.messen()
+                        self.letzte_messung = time.time()
                         d_werte = self._pruefe_druck_spruenge(d_werte)
                         if self._soll_emittieren("druck", d_werte):
                             try:
@@ -213,8 +228,13 @@ class Messzyklus:
                 time.sleep(wartezeit)
 
             except Exception as e:
+                # Achtung: Nichts in diesem Block darf eine Exception werfen,
+                # sonst endet der Mess-Thread (tprint ist abgesichert).
                 tprint("Messzyklus", f"Unerwarteter Fehler: {e}")
-                traceback.print_exc()
+                try:
+                    traceback.print_exc()
+                except Exception:
+                    pass
                 # In Fehlerlog schreiben
                 try:
                     import os
@@ -310,20 +330,33 @@ class Messzyklus:
         result = {}
         for name, d in werte.items():
             if not d.get("gueltig") or d.get("celsius") is None:
+                # Sensor ungültig (z.B. abgesteckt): Referenz verwerfen, damit
+                # der erste Wert nach dem Wiederanschließen nicht mit einem
+                # womöglich Stunden alten Wert verglichen wird.
+                self._letzter_temp.pop(name, None)
+                self._ausreisser_folge.pop(name, None)
                 result[name] = d
                 continue
             wert = d["celsius"]
             if name in self._letzter_temp:
                 sprung = abs(wert - self._letzter_temp[name])
                 if te["ausreisser_aktiv"] and sprung > te["ausreisser_grad"]:
+                    folge = self._ausreisser_folge.get(name, 0) + 1
+                    if folge < AUSREISSER_MAX_FOLGE:
+                        self._ausreisser_folge[name] = folge
+                        if self.bei_sprung_alarm:
+                            self.bei_sprung_alarm("temp_ausreisser", name, wert, sprung)
+                        result[name] = {**d, "gueltig": False, "celsius": None,
+                                        "kelvin": None, "fehler": f"Ausreißer ({sprung:.1f}°C)"}
+                        continue
+                    # Mehrfach in Folge "Ausreißer" → echter Sprung: Wert
+                    # übernehmen (fällt unten durch und wird neue Referenz).
                     if self.bei_sprung_alarm:
-                        self.bei_sprung_alarm("temp_ausreisser", name, wert, sprung)
-                    result[name] = {**d, "gueltig": False, "celsius": None,
-                                    "kelvin": None, "fehler": f"Ausreißer ({sprung:.1f}°C)"}
-                    continue
+                        self.bei_sprung_alarm("temp_alarm", name, wert, sprung)
                 elif te["sprung_alarm_aktiv"] and sprung > te["sprung_alarm_grad"]:
                     if self.bei_sprung_alarm:
                         self.bei_sprung_alarm("temp_alarm", name, wert, sprung)
+            self._ausreisser_folge.pop(name, None)
             self._letzter_temp[name] = wert
             result[name] = d
         return result
